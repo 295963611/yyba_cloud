@@ -1,0 +1,29 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android
+.gradle/
+build/
+local.properties
+
+.gradle/
+app/build/
+app/local.properties
+
+
+# Data
+.yyba_cloud/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: yyba-cloud
+  datasource:
+    url: jdbc:sqlite:${yyba.data-dir:${user.home}/.yyba_cloud}/yyba_cloud.db?busy_timeout=60000&journal_mode=WAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    mixed: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+server:
+  port: 8080
+  tomcat:
+    max-http-form-post-size: 100MB
+    max-swallow-size: 100MB
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+
+yyba:
+  data-dir: ${user.home}/.yyba_cloud
+  jwt:
+    secret: yyba-cloud-family-secret-key-change-in-production-2024
+    expire-days: 7
+  internal-api-key: yyba-internal-launcher-key
+  upload:
+    chunk-size: 20971520
+    session-expire-hours: 24
+  mdns:
+    enabled: true
+    service-name: YybaCloud
+    service-type: _yybacloud._tcp.local.
+
+logging:
+  level:
+    com.yyba.cloud: INFO
