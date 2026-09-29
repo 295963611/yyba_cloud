@@ -10,6 +10,8 @@
     <string name="server_port_hint">8080</string>
     <string name="sync_now">立即同步</string>
     <string name="settings">设置</string>
+    <string name="about">关于</string>
+    <string name="version_format">版本 %1$s</string>
     <string name="logout">退出登录</string>
     <string name="sync_status">同步状态</string>
     <string name="sync_idle">等待同步</string>

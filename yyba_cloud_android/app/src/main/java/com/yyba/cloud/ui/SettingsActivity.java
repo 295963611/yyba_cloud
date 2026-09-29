@@ -1,7 +1,9 @@
 package com.yyba.cloud.ui;
 
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,6 +43,9 @@ public class SettingsActivity extends AppCompatActivity {
         SwitchMaterial switchAuto = findViewById(R.id.switchAutoSync);
         MaterialButton btnRediscover = findViewById(R.id.btnRediscover);
         MaterialButton btnSave = findViewById(R.id.btnSave);
+
+        TextView tvVersion = findViewById(R.id.tvVersion);
+        tvVersion.setText(getString(R.string.version_format, resolveVersionName()));
 
         ServerAddress.loadInto(prefs, etServerHost, etServerPort);
         switchAutoDiscover.setChecked(prefs.isAutoDiscover());
@@ -94,5 +99,13 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
             finish();
         });
+    }
+
+    private String resolveVersionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "1.0.0";
+        }
     }
 }

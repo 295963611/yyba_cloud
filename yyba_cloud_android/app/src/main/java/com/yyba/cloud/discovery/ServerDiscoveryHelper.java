@@ -22,22 +22,42 @@ public final class ServerDiscoveryHelper {
         public final String savedUrl;
         public final boolean manualRediscover;
         public final boolean allowPicker;
+        /** 弹窗确认完成后的回调；非 null 时由 helper 在弹窗按钮中触发 */
+        public final PendingListener pendingListener;
 
         public ApplyContext(String savedUrl, boolean manualRediscover, boolean allowPicker) {
+            this(savedUrl, manualRediscover, allowPicker, null);
+        }
+
+        public ApplyContext(String savedUrl, boolean manualRediscover, boolean allowPicker,
+                            PendingListener pendingListener) {
             this.savedUrl = savedUrl != null ? savedUrl : "";
             this.manualRediscover = manualRediscover;
             this.allowPicker = allowPicker;
+            this.pendingListener = pendingListener;
         }
     }
 
     public static final class ApplyResult {
         public final String selectedUrl;
         public final boolean multiServerBackground;
+        /** 弹窗正在等待用户确认；外层应暂缓通知 listener，由 setPendingListener 回调真正完成 */
+        public final boolean pendingUserConfirm;
 
-        ApplyResult(String selectedUrl, boolean multiServerBackground) {
+        ApplyResult(String selectedUrl, boolean multiServerBackground, boolean pendingUserConfirm) {
             this.selectedUrl = selectedUrl != null ? selectedUrl : "";
             this.multiServerBackground = multiServerBackground;
+            this.pendingUserConfirm = pendingUserConfirm;
         }
+
+        ApplyResult(String selectedUrl, boolean multiServerBackground) {
+            this(selectedUrl, multiServerBackground, false);
+        }
+    }
+
+    /** 弹窗回调：用户最终选择 URL 后通知外层 listener */
+    public interface PendingListener {
+        void onUserConfirmed(String finalUrl);
     }
 
     private ServerDiscoveryHelper() {
@@ -62,13 +82,16 @@ public final class ServerDiscoveryHelper {
                 return new ApplyResult(ctx.savedUrl, false);
             }
             if (ctx.allowPicker && activity != null && !activity.isFinishing()) {
-                confirmSwitch(activity, prefs, server, ctx.savedUrl, null);
+                // 弹窗异步；同步返回 pending 标志，外层暂缓通知 listener，
+                // 由弹窗按钮回调真正触发 PendingListener.onUserConfirmed(finalUrl)。
+                confirmSwitch(activity, prefs, server, ctx.savedUrl, ctx.pendingListener);
+                return new ApplyResult(ctx.savedUrl, false, true);
             }
             return new ApplyResult(ctx.savedUrl, false);
         }
         if (ctx.allowPicker && activity != null && !activity.isFinishing()) {
-            showPicker(activity, prefs, servers);
-            return new ApplyResult(prefs.getServerUrl(), false);
+            showPicker(activity, prefs, servers, ctx.pendingListener);
+            return new ApplyResult(prefs.getServerUrl(), false, true);
         }
         if (activity != null && !activity.isFinishing()) {
             Toast.makeText(activity, R.string.discover_multi_go_settings, Toast.LENGTH_LONG).show();
@@ -102,7 +125,7 @@ public final class ServerDiscoveryHelper {
                                       PrefsManager prefs,
                                       NsdServerDiscovery.DiscoveredServer server,
                                       String savedUrl,
-                                      UrlCallback callback) {
+                                      PendingListener pendingListener) {
         String message = activity.getString(R.string.discover_switch_confirm,
                 ServerAddress.formatDisplay(server.host, server.port),
                 ServerAddress.formatDisplay(
@@ -112,21 +135,25 @@ public final class ServerDiscoveryHelper {
                 .setTitle(R.string.discover_switch_title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String finalUrl = savedUrl;
                     if (applyServer(prefs, server)) {
                         Toast.makeText(activity, prefs.getServerDisplay(), Toast.LENGTH_SHORT).show();
-                        if (callback != null) {
-                            callback.onUrlSelected(prefs.getServerUrl());
-                        }
+                        finalUrl = prefs.getServerUrl();
                     } else {
                         Toast.makeText(activity, R.string.discovery_endpoint_save_failed, Toast.LENGTH_LONG).show();
-                        if (callback != null) {
-                            callback.onUrlSelected(savedUrl);
-                        }
+                    }
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(finalUrl);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, (d, w) -> {
-                    if (callback != null) {
-                        callback.onUrlSelected(savedUrl);
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(savedUrl);
+                    }
+                })
+                .setOnCancelListener(d -> {
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(savedUrl);
                     }
                 })
                 .show();
@@ -141,7 +168,8 @@ public final class ServerDiscoveryHelper {
 
     private static void showPicker(Activity activity,
                                    PrefsManager prefs,
-                                   List<NsdServerDiscovery.DiscoveredServer> servers) {
+                                   List<NsdServerDiscovery.DiscoveredServer> servers,
+                                   PendingListener pendingListener) {
         List<String> labels = new ArrayList<>();
         for (NsdServerDiscovery.DiscoveredServer server : servers) {
             labels.add(server.name + "\n" + ServerAddress.formatDisplay(server.host, server.port));
@@ -151,15 +179,29 @@ public final class ServerDiscoveryHelper {
                 .setTitle(R.string.discover_select_server)
                 .setItems(items, (dialog, which) -> {
                     NsdServerDiscovery.DiscoveredServer server = servers.get(which);
+                    String finalUrl = prefs.getServerUrl();
                     if (applyServer(prefs, server)) {
                         Toast.makeText(activity,
                                 ServerAddress.formatDisplay(server.host, server.port),
                                 Toast.LENGTH_SHORT).show();
+                        finalUrl = prefs.getServerUrl();
                     } else {
                         Toast.makeText(activity, R.string.discovery_endpoint_save_failed, Toast.LENGTH_LONG).show();
                     }
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(finalUrl);
+                    }
                 })
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(android.R.string.cancel, (d, w) -> {
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(prefs.getServerUrl());
+                    }
+                })
+                .setOnCancelListener(d -> {
+                    if (pendingListener != null) {
+                        pendingListener.onUserConfirmed(prefs.getServerUrl());
+                    }
+                })
                 .show();
     }
 }

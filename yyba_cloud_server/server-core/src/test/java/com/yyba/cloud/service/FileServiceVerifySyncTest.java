@@ -9,6 +9,7 @@ import com.yyba.cloud.dto.VerifySyncItemDto;
 import com.yyba.cloud.dto.VerifySyncRequest;
 
 import com.yyba.cloud.dto.VerifySyncResponse;
+import com.yyba.cloud.dto.SyncRecordDto;
 
 import com.yyba.cloud.entity.CloudFile;
 

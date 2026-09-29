@@ -82,12 +82,23 @@ public class ServerDiscoveryManager {
         activeDiscovery = new NsdServerDiscovery(appContext);
         activeDiscovery.discover(DISCOVERY_TIMEOUT_MS, servers -> {
             boolean allowPicker = request.activity != null;
+            // pending 回调：弹窗用户确认后再通知外层 listener
+            ServerDiscoveryHelper.PendingListener pending = finalUrl -> {
+                ServerDiscoveryHelper.ApplyResult finalResult = new ServerDiscoveryHelper.ApplyResult(
+                        finalUrl, false);
+                finishDiscovery(request, servers, finalResult);
+            };
             ServerDiscoveryHelper.ApplyContext ctx = new ServerDiscoveryHelper.ApplyContext(
                     prefs.getServerUrl(),
                     request.manualRediscover,
-                    allowPicker && request.activity != null);
+                    allowPicker && request.activity != null,
+                    pending);
             ServerDiscoveryHelper.ApplyResult applyResult = ServerDiscoveryHelper.applyDiscoveryResult(
                     request.activity, prefs, servers, ctx);
+            if (applyResult.pendingUserConfirm) {
+                // 弹窗进行中；外层 listener 暂缓，等 pending 回调
+                return;
+            }
             finishDiscovery(request, servers, applyResult);
         });
     }

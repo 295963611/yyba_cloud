@@ -41,9 +41,15 @@ public class LauncherApplication {
     }
 
     public static void shutdown() {
-        if (springContext != null) {
-            springContext.close();
+        try {
+            if (springContext != null) {
+                springContext.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
             springContext = null;
+            System.exit(0);   // 兜底：保证 JVM 一定终止
         }
     }
 

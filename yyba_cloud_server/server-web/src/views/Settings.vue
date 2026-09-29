@@ -44,6 +44,11 @@
         <el-button @click="load">刷新</el-button>
       </el-form-item>
     </el-form>
+    <el-divider content-position="left">关于</el-divider>
+    <div class="about">
+      <span class="about-name">悠悠爸家庭云盘</span>
+      <span class="about-version">版本 {{ version }}</span>
+    </div>
   </div>
 </template>
 
@@ -52,6 +57,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getConfig, updateConfig } from '../api'
 import { syncRoleFromServer } from '../utils/auth'
+import { version } from '../../package.json'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -125,5 +131,19 @@ onMounted(load)
   font-size: 12px;
   color: #909399;
   margin-top: 4px;
+}
+.about {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-left: 2px;
+}
+.about-name {
+  font-size: 14px;
+  color: #303133;
+}
+.about-version {
+  font-size: 13px;
+  color: #909399;
 }
 </style>
