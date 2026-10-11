@@ -25,11 +25,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {
+        log.warn("Invalid argument: {}", e.getMessage());
         return jsonError(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException e) {
+        log.error("Illegal state", e);
         return jsonError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
@@ -38,6 +40,7 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
+        log.warn("Validation failed: {}", message);
         return jsonError(HttpStatus.BAD_REQUEST, message);
     }
 

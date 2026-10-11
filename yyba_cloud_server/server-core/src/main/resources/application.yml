@@ -44,7 +44,3 @@ yyba:
     enabled: true
     service-name: YybaCloud
     service-type: _yybacloud._tcp.local.
-
-logging:
-  level:
-    com.yyba.cloud: INFO

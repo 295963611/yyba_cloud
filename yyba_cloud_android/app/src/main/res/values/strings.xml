@@ -21,6 +21,8 @@
     <string name="nav_cloud">网盘</string>
     <string name="user_info">用户信息</string>
     <string name="cloud_info">网盘信息</string>
+    <string name="cloud_info_config">网盘信息配置</string>
+    <string name="cloud_info_config_hint">关闭后首页不再展示对应入口</string>
     <string name="category_album">相册</string>
     <string name="category_video">视频</string>
     <string name="category_document">文档</string>

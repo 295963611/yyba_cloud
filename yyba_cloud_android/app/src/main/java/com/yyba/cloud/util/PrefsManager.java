@@ -312,6 +312,21 @@ public class PrefsManager {
         return prefs.getBoolean("auto_sync", false);
     }
 
+    /** 网盘分类入口（IMAGE/VIDEO/DOCUMENT/AUDIO）可见性，默认全开 */
+    public void setCategoryVisible(String category, boolean visible) {
+        if (category == null || category.isEmpty()) {
+            return;
+        }
+        prefs.edit().putBoolean("category_visible_" + category, visible).apply();
+    }
+
+    public boolean isCategoryVisible(String category) {
+        if (category == null || category.isEmpty()) {
+            return false;
+        }
+        return prefs.getBoolean("category_visible_" + category, true);
+    }
+
     public void setSyncIndexServerTime(long epochMs) {
         prefs.edit().putLong("sync_index_server_time", epochMs).apply();
     }

@@ -2,8 +2,10 @@ package com.yyba.cloud.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -27,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private PrefsManager prefs;
     private HomeFragment homeFragment;
     private CloudFragment cloudFragment;
+    private boolean showingCloud;
+    private OnBackPressedCallback backCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +80,24 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
+        backCallback = new OnBackPressedCallback(false) {
+            @Override
+            public void handleOnBackPressed() {
+                Log.d("MainActivity", "handleOnBackPressed: showingCloud=" + showingCloud
+                        + ", cloudFragment=" + (cloudFragment != null ? "not null" : "null")
+                        + ", canGoBack=" + (cloudFragment != null && cloudFragment.canGoBack()));
+                if (showingCloud && cloudFragment != null && cloudFragment.canGoBack()) {
+                    cloudFragment.goBack();
+                } else if (showingCloud) {
+                    bottomNav.setSelectedItemId(R.id.nav_home);
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, backCallback);
+
         updateHomeServerUrl();
     }
 
@@ -92,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchTab(MaterialToolbar toolbar, boolean cloud) {
+        showingCloud = cloud;
         if (cloud) {
             if (cloudFragment == null) {
                 cloudFragment = (CloudFragment) getSupportFragmentManager().findFragmentByTag(TAG_CLOUD);
@@ -110,6 +133,9 @@ public class MainActivity extends AppCompatActivity {
             }
             toolbar.setTitle(R.string.nav_home);
             showOnly(homeFragment, TAG_HOME);
+        }
+        if (backCallback != null) {
+            backCallback.setEnabled(showingCloud);
         }
     }
 

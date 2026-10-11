@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import android.os.Bundle;
+import android.util.Log;
 
 import android.view.LayoutInflater;
 
@@ -67,6 +68,27 @@ public class CloudFragment extends Fragment implements CloudFileAdapter.Listener
     private String currentPath = "";
 
     private boolean loading;
+
+    private String parentPathOf(String path) {
+        if (path == null || path.isEmpty()) {
+            return "";
+        }
+        int idx = path.lastIndexOf('/');
+        if (idx <= 0) {
+            return "";
+        }
+        return path.substring(0, idx);
+    }
+
+    public boolean canGoBack() {
+        Log.d("CloudFragment", "canGoBack: currentPath='" + currentPath + "'");
+        return !currentPath.isEmpty();
+    }
+
+    public void goBack() {
+        Log.d("CloudFragment", "goBack: from='" + currentPath + "' to='" + parentPathOf(currentPath) + "'");
+        loadFiles(parentPathOf(currentPath));
+    }
 
 
 
@@ -160,11 +182,15 @@ public class CloudFragment extends Fragment implements CloudFileAdapter.Listener
 
     private void loadFiles(String path) {
 
+        Log.d("CloudFragment", "loadFiles: path='" + path + "' loading=" + loading);
+
         if (loading) return;
 
         loading = true;
 
         currentPath = path == null ? "" : path;
+
+        Log.d("CloudFragment", "loadFiles: currentPath set to '" + currentPath + "'");
 
         updateBreadcrumb();
 
@@ -295,6 +321,8 @@ public class CloudFragment extends Fragment implements CloudFileAdapter.Listener
     public void onItemClick(CloudFile file, int position) {
 
         if (file == null) return;
+
+        Log.d("CloudFragment", "onItemClick: name='" + file.name + "' directory=" + file.directory + " relativePath='" + file.relativePath + "'");
 
         if (file.directory) {
 

@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.GridLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,6 +47,12 @@ public class HomeFragment extends Fragment {
     private TextView tvSyncProgressDetail;
     private ProgressBar progressSync;
     private MaterialButton btnSync;
+    private MaterialCardView tileAlbum;
+    private MaterialCardView tileVideo;
+    private MaterialCardView tileDocument;
+    private MaterialCardView tileAudio;
+    private GridLayout gridCategories;
+    private MaterialButton btnTrash;
     private boolean pendingSync;
     private String pendingCategory;
     private String pendingTitle;
@@ -137,17 +144,20 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        MaterialCardView tileAlbum = view.findViewById(R.id.tileAlbum);
-        MaterialCardView tileVideo = view.findViewById(R.id.tileVideo);
-        MaterialCardView tileDocument = view.findViewById(R.id.tileDocument);
-        MaterialCardView tileAudio = view.findViewById(R.id.tileAudio);
-        MaterialButton btnTrash = view.findViewById(R.id.btnTrash);
+        gridCategories = view.findViewById(R.id.gridCategories);
+        tileAlbum = view.findViewById(R.id.tileAlbum);
+        tileVideo = view.findViewById(R.id.tileVideo);
+        tileDocument = view.findViewById(R.id.tileDocument);
+        tileAudio = view.findViewById(R.id.tileAudio);
+        btnTrash = view.findViewById(R.id.btnTrash);
 
         tileAlbum.setOnClickListener(v -> openMediaList("IMAGE", getString(R.string.category_album)));
         tileVideo.setOnClickListener(v -> openMediaList("VIDEO", getString(R.string.category_video)));
         tileDocument.setOnClickListener(v -> openMediaList("DOCUMENT", getString(R.string.category_document)));
         tileAudio.setOnClickListener(v -> openMediaList("AUDIO", getString(R.string.category_audio)));
         btnTrash.setOnClickListener(v -> openTrash());
+
+        applyCategoryVisibility();
 
         TrashConfigHelper.prefetch(requireContext());
         refreshStats();
@@ -176,6 +186,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        applyCategoryVisibility();
         long now = System.currentTimeMillis();
         if (now - lastStatsRefreshAt > 60_000 && !SyncProgressBus.isRunning()) {
             refreshStats();
@@ -200,6 +211,12 @@ public class HomeFragment extends Fragment {
         tvSyncProgressDetail = null;
         progressSync = null;
         btnSync = null;
+        tileAlbum = null;
+        tileVideo = null;
+        tileDocument = null;
+        tileAudio = null;
+        gridCategories = null;
+        btnTrash = null;
         super.onDestroyView();
     }
 
@@ -236,6 +253,33 @@ public class HomeFragment extends Fragment {
 
     private void openTrash() {
         startActivity(new Intent(requireContext(), TrashActivity.class));
+    }
+
+    private void applyCategoryVisibility() {
+        if (prefs == null || gridCategories == null || tileAlbum == null) {
+            return;
+        }
+        // GridLayout 不会为 GONE 子项重排，因此按可见集合移除后按固定顺序重新添加，
+        // 卡片会自动两列从左到右补位；回收站按钮始终排在最后。
+        gridCategories.removeView(tileAlbum);
+        gridCategories.removeView(tileVideo);
+        gridCategories.removeView(tileDocument);
+        gridCategories.removeView(tileAudio);
+        gridCategories.removeView(btnTrash);
+
+        if (prefs.isCategoryVisible("IMAGE")) {
+            gridCategories.addView(tileAlbum);
+        }
+        if (prefs.isCategoryVisible("VIDEO")) {
+            gridCategories.addView(tileVideo);
+        }
+        if (prefs.isCategoryVisible("DOCUMENT")) {
+            gridCategories.addView(tileDocument);
+        }
+        if (prefs.isCategoryVisible("AUDIO")) {
+            gridCategories.addView(tileAudio);
+        }
+        gridCategories.addView(btnTrash);
     }
 
     private void refreshStats() {

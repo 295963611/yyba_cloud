@@ -41,6 +41,10 @@ public class SettingsActivity extends AppCompatActivity {
         switchAutoDiscover = findViewById(R.id.switchAutoDiscover);
         SwitchMaterial switchWifi = findViewById(R.id.switchWifiOnly);
         SwitchMaterial switchAuto = findViewById(R.id.switchAutoSync);
+        SwitchMaterial switchShowAlbum = findViewById(R.id.switchShowAlbum);
+        SwitchMaterial switchShowVideo = findViewById(R.id.switchShowVideo);
+        SwitchMaterial switchShowDocument = findViewById(R.id.switchShowDocument);
+        SwitchMaterial switchShowAudio = findViewById(R.id.switchShowAudio);
         MaterialButton btnRediscover = findViewById(R.id.btnRediscover);
         MaterialButton btnSave = findViewById(R.id.btnSave);
 
@@ -51,6 +55,10 @@ public class SettingsActivity extends AppCompatActivity {
         switchAutoDiscover.setChecked(prefs.isAutoDiscover());
         switchWifi.setChecked(prefs.isWifiOnly());
         switchAuto.setChecked(prefs.isAutoSync());
+        switchShowAlbum.setChecked(prefs.isCategoryVisible("IMAGE"));
+        switchShowVideo.setChecked(prefs.isCategoryVisible("VIDEO"));
+        switchShowDocument.setChecked(prefs.isCategoryVisible("DOCUMENT"));
+        switchShowAudio.setChecked(prefs.isCategoryVisible("AUDIO"));
 
         switchAutoDiscover.setOnCheckedChangeListener((button, checked) -> {
             prefs.setAutoDiscover(checked);
@@ -88,6 +96,10 @@ public class SettingsActivity extends AppCompatActivity {
             prefs.setAutoDiscover(switchAutoDiscover.isChecked());
             prefs.setWifiOnly(switchWifi.isChecked());
             prefs.setAutoSync(switchAuto.isChecked());
+            prefs.setCategoryVisible("IMAGE", switchShowAlbum.isChecked());
+            prefs.setCategoryVisible("VIDEO", switchShowVideo.isChecked());
+            prefs.setCategoryVisible("DOCUMENT", switchShowDocument.isChecked());
+            prefs.setCategoryVisible("AUDIO", switchShowAudio.isChecked());
             if (switchAuto.isChecked()) {
                 SyncWorker.schedule(this);
             } else {
