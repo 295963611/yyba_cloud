@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD · 手机备份（任意文件夹/文件手动同步）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1f2329; --ink-2:#4e5969; --ink-3:#86909c;
+    --line:#e5e6eb; --brand:#2b6cef; --brand-bg:#eef3ff;
+    --green:#00a870; --green-bg:#e8fffb; --amber:#d4a000; --amber-bg:#fff7e0;
+    --red:#d83939; --red-bg:#ffece8; --purple:#7c3fdd;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.75;font-size:15px}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 28px 96px}
+  header.doc{background:linear-gradient(135deg,#1d39c4,#2b6cef);color:#fff;border-radius:18px;
+    padding:34px 38px;margin-bottom:26px;box-shadow:0 8px 28px rgba(43,108,239,.22)}
+  header.doc .eyebrow{font-size:13px;letter-spacing:.18em;opacity:.85;text-transform:uppercase}
+  header.doc h1{margin:.35em 0 .25em;font-size:30px;letter-spacing:.5px}
+  header.doc p{margin:0;opacity:.92;font-size:14px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+  .meta-grid .m{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);
+    border-radius:10px;padding:10px 14px}
+  .meta-grid .m b{display:block;font-size:12px;opacity:.8;font-weight:500}
+  .meta-grid .m span{font-size:14px;font-weight:600}
+  section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px 30px;margin-bottom:20px}
+  h2{font-size:21px;margin:0 0 14px;padding-left:12px;border-left:4px solid var(--brand)}
+  h3{font-size:17px;margin:24px 0 10px;color:var(--ink)}
+  h4{font-size:15px;margin:16px 0 6px;color:var(--ink-2)}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#f2f4f8;font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+  code{background:#f0f2f5;border-radius:5px;padding:1px 7px;font-size:13px;
+    font-family:Consolas,"Courier New",monospace;color:#b42bb8}
+  .tag{display:inline-block;border-radius:5px;padding:1px 8px;font-size:12px;font-weight:600}
+  .p0{background:#ffece8;color:#d83939}
+  .p1{background:#fff7e0;color:#b8860b}
+  .out{background:#eef0f3;color:#6b7280}
+  .ok{background:var(--green-bg);color:var(--green)}
+  .assume{background:var(--brand-bg);color:var(--brand);border-radius:5px;padding:0 6px;font-size:12.5px}
+  .tbd{background:var(--amber-bg);color:var(--amber);border-radius:5px;padding:0 6px;font-size:12.5px}
+  .callout{border-radius:10px;padding:13px 16px;margin:14px 0;font-size:14px}
+  .callout.info{background:var(--brand-bg);border-left:4px solid var(--brand)}
+  .callout.warn{background:var(--amber-bg);border-left:4px solid var(--amber)}
+  .callout.key{background:var(--green-bg);border-left:4px solid var(--green)}
+  .fr{border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:14px 0}
+  .fr .fr-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .fr .fr-id{background:var(--brand);color:#fff;border-radius:6px;font-size:12.5px;
+    padding:2px 9px;font-weight:700;letter-spacing:.5px}
+  .fr .fr-title{font-size:16.5px;font-weight:700}
+  .fr dl{margin:6px 0 0}
+  .fr dt{font-weight:700;color:var(--ink);font-size:13.5px;margin-top:9px}
+  .fr dd{margin:2px 0 0 0;color:var(--ink-2);font-size:14px}
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:14px 0}
+  .flow .step{flex:1;min-width:130px;background:#f7f9ff;border:1px solid #d6e2ff;border-radius:10px;
+    padding:11px 13px;font-size:13.5px;position:relative;margin-right:22px}
+  .flow .step:last-child{margin-right:0}
+  .flow .step b{display:block;color:var(--brand);font-size:13px;margin-bottom:2px}
+  .flow .step::after{content:"→";position:absolute;right:-18px;top:50%;transform:translateY(-50%);
+    color:var(--brand);font-size:18px;font-weight:700}
+  .flow .step:last-child::after{content:""}
+  /* phone demo */
+  .demo-wrap{display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;margin:16px 0}
+  .demo-switch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .demo-switch button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 14px;
+    font-size:13px;cursor:pointer;color:var(--ink-2)}
+  .demo-switch button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .phone{width:288px;height:576px;border-radius:34px;background:#1f2329;padding:9px;
+    box-shadow:0 10px 34px rgba(0,0,0,.22);margin:0 auto}
+  .screen{width:100%;height:100%;border-radius:26px;background:#f5f6f8;overflow:hidden;
+    display:flex;flex-direction:column;position:relative}
+  .statusbar{height:26px;background:#fff;display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;font-size:11px;color:#333;flex-shrink:0}
+  .appbar{background:#fff;padding:9px 14px;display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid #eee;flex-shrink:0}
+  .appbar .back{font-size:18px;color:#333}
+  .appbar .t{font-weight:700;font-size:15px;flex:1}
+  .appbar .act{font-size:12.5px;color:var(--brand);font-weight:600}
+  .appbar .act.disabled{color:#bbb}
+  .crumb{background:#fff;padding:6px 14px 9px;font-size:11.5px;color:#86909c;border-bottom:1px solid #f0f0f0}
+  .body{flex:1;overflow-y:auto}
+  .row{display:flex;align-items:center;gap:10px;background:#fff;padding:10px 14px;
+    border-bottom:1px solid #f2f3f5;font-size:13px}
+  .row .ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;font-size:17px;flex-shrink:0}
+  .ic.folder{background:#fff2d8}
+  .ic.img{background:#e3f0ff}
+  .ic.doc{background:#eef7e8}
+  .ic.zip{background:#f3eaff}
+  .row .nm{flex:1;min-width:0}
+  .row .nm .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+  .row .nm .s{font-size:11px;color:#a0a6b0}
+  .badge{font-size:10.5px;padding:1.5px 7px;border-radius:20px;white-space:nowrap}
+  .b-done{background:var(--green-bg);color:var(--green)}
+  .b-done2{background:var(--brand-bg);color:var(--brand)}
+  .b-wait{background:#f0f1f3;color:#8a9099}
+  .b-err{background:var(--red-bg);color:var(--red)}
+  .b-run{background:#e6f4ff;color:#1677d8}
+  .chk{width:19px;height:19px;border-radius:50%;border:2px solid #c9cdd4;flex-shrink:0;display:flex;
+    align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .chk.on{background:var(--brand);border-color:var(--brand)}
+  .selectbar{background:#fff;border-top:1px solid #e5e6eb;padding:11px 14px;display:flex;
+    align-items:center;gap:10px;flex-shrink:0}
+  .selectbar .cnt{flex:1;font-size:13px;color:#4e5969}
+  .btn-primary{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 18px;
+    font-size:13.5px;font-weight:600}
+  .btn-primary:disabled{background:#bcd0f5}
+  .perm-screen{padding:50px 26px;text-align:center}
+  .perm-screen .big{font-size:52px}
+  .perm-screen h4{margin:14px 0 8px;font-size:17px;color:#1f2329}
+  .perm-screen p{font-size:13px;color:#869099}
+  .perm-screen .btn-primary{margin-top:16px;padding:10px 26px}
+  .prog-card{margin:16px 14px;background:#fff;border-radius:12px;padding:16px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .prog-card .pt{font-weight:700;font-size:14px;margin-bottom:4px}
+  .prog-card .ps{font-size:12px;color:#869099;margin-bottom:10px}
+  .bar{height:8px;border-radius:6px;background:#eef0f3;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--brand);border-radius:6px}
+  .prog-card .cancel{margin-top:12px;text-align:center;font-size:13px;color:var(--red);font-weight:600}
+  .result{margin:44px 22px;text-align:center}
+  .result .ring{width:74px;height:74px;border-radius:50%;background:var(--green-bg);color:var(--green);
+    font-size:36px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+  .result h4{font-size:18px;margin:0 0 6px}
+  .result .st{font-size:13px;color:#869099;line-height:2}
+  .demo-note{font-size:13.5px;color:var(--ink-2)}
+  .demo-note .ln{display:flex;gap:8px;margin:7px 0;align-items:flex-start}
+  .demo-note .dot{flex-shrink:0;width:8px;height:8px;border-radius:50%;margin-top:9px}
+  .states td:first-child{white-space:nowrap;font-weight:600}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin:8px 0 0}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .toc a{font-size:13px;color:var(--brand);text-decoration:none;background:#fff;border:1px solid var(--line);
+    border-radius:20px;padding:5px 13px}
+  .toc a:hover{border-color:var(--brand)}
+  @media(max-width:760px){
+    .demo-wrap{grid-template-columns:1fr}
+    .meta-grid{grid-template-columns:repeat(2,1fr)}
+    .flow .step{min-width:45%;margin-bottom:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Product Requirements Document</div>
+  <h1>手机备份：任意文件夹/文件手动同步</h1>
+  <p>在现有「相册/视频/音频」媒体自动同步之外，新增面向手机本地文件系统的浏览与手动备份能力</p>
+  <div class="meta-grid">
+    <div class="m"><b>文档状态</b><span>待评审</span></div>
+    <div class="m"><b>版本</b><span>v1.0（P0）</span></div>
+    <div class="m"><b>平台</b><span>Android 手机端</span></div>
+    <div class="m"><b>日期</b><span>2026-10-12</span></div>
+  </div>
+</header>
+
+<div class="toc">
+  <a href="#bg">1 背景与目标</a>
+  <a href="#scope">2 范围</a>
+  <a href="#model">3 产品模型</a>
+  <a href="#fr">4 功能需求</a>
+  <a href="#rules">5 共享规则</a>
+  <a href="#states">6 状态机</a>
+  <a href="#exception">7 异常与边界</a>
+  <a href="#open">8 待确认项</a>
+</div>
+
+<!-- 1 -->
+<section class="card" id="bg">
+  <h2>1. 背景与目标</h2>
+  <p><b>现状：</b>客户端目前只同步系统媒体库（相册照片、视频、音频），用户手机里的文档、压缩包、安装包、微信/浏览器下载文件、工作目录等<b>无法主动备份</b>；用户也无法按"文件夹"为单位把手机内容原样保存到网盘。</p>
+  <p><b>受影响的时刻：</b>用户整理文件、换机前备份、归档票据/合同/资料时，需要在网盘里按手机原本的目录结构找到这些文件。</p>
+  <p><b>产品决策：</b>在网盘页提供「手机备份」入口，用户浏览手机本地存储、选择任意文件夹或文件，手动将其按原目录结构备份到网盘专属区域；已通过相册同步备份过的内容自动识别为"已备份"，不重复上传、不重复占空间。</p>
+  <div class="callout key">
+    <b>可观察的完成结果：</b>用户在手机上选择一个文件夹并点同步后，网盘 <code>phoneBackup/&lt;设备名&gt;/</code> 下出现与手机一致的目录结构与文件；本地列表中这些文件状态变为"已备份"；下次进入无需重传。
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="card" id="scope">
+  <h2>2. 范围</h2>
+  <h3>P0（本期交付）—— 一条完整的手动备份旅程</h3>
+  <table>
+    <tr><th style="width:46%">能力</th><th>说明</th></tr>
+    <tr><td>网盘页入口</td><td>网盘 tab 顶部操作区新增「手机备份」按钮，与「回收站」并列</td></tr>
+    <tr><td>本地文件浏览</td><td>浏览手机主存储的目录树，进入/返回上级，查看文件与文件夹（大小、数量）</td></tr>
+    <tr><td>多选与整文件夹选择</td><td>勾选文件即选中文件；勾选文件夹即<b>递归</b>选中其全部内容</td></tr>
+    <tr><td>备份状态识别</td><td>浏览时展示每个文件/文件夹的备份状态：未备份 / 已备份（相册）/ 已备份（手机备份）</td></tr>
+    <tr><td>手动同步执行</td><td>前台服务执行，带通知；页内显示进度，可取消；完成后给出成功/跳过/失败汇总并支持重试失败项</td></tr>
+    <tr><td>路径镜像落盘</td><td>落到网盘 <code>phoneBackup/&lt;设备名&gt;/&lt;手机相对路径&gt;</code></td></tr>
+  </table>
+  <p><b>入口条件：</b>已登录；授予"所有文件访问"权限（Android 11+）。<br>
+     <b>完成证据：</b>所选文件在网盘对应路径可见，列表状态更新为已备份。<br>
+     <b>关键失败恢复：</b>单文件失败不中断整批，结束后可一键重试失败项。</p>
+
+  <h3>P1（后续迭代，本期不做）</h3>
+  <ul>
+    <li>对选定文件夹开启<b>定时自动备份</b>（含仅 WiFi 等约束）</li>
+    <li>备份记录/历史管理页（每次备份的清单与结果）</li>
+    <li>SD 卡 / USB OTG 等辅助存储</li>
+    <li>设备名管理（多设备列表、重命名云端设备目录）</li>
+  </ul>
+
+  <h3>明确排除</h3>
+  <table>
+    <tr><th style="width:46%">排除项</th><th>原因</th></tr>
+    <tr><td>双向同步 / 云端还原到手机原路径</td><td>冲突处理复杂，本期只做"手机 → 网盘"单向快照</td></tr>
+    <tr><td>文件实时监听备份</td><td>常驻监听耗电，家庭场景收益低</td></tr>
+    <tr><td>访问 <code>/Android/data</code>、<code>/Android/obb</code> 等应用私有目录</td><td>系统强制限制，任何权限都无法访问其他应用私有目录</td></tr>
+    <tr><td>系统 SAF 文件选择器方案</td><td>无法承载"目录浏览 + 多选 + 文件夹整选 + 状态标注"的自定义体验</td></tr>
+    <tr><td>影视系统（刮削/海报墙）</td><td>独立项目，下一期</td></tr>
+    <tr><td>iOS / Web / TV 端</td><td>本期仅 Android 手机端</td></tr>
+  </table>
+</section>
+
+<!-- 3 -->
+<section class="card" id="model">
+  <h2>3. 产品模型</h2>
+
+  <h3>3.1 两条备份线的关系（重要）</h3>
+  <p>系统中并存两类备份，组织方式不同但<b>同属一个网盘文件体系</b>，与群晖（Photos 与 Drive）、飞牛 OS（相册与文件）的做法一致：</p>
+  <table>
+    <tr><th>维度</th><th>相册同步（现有）</th><th>手机备份（本次新增）</th></tr>
+    <tr><td>内容</td><td>照片 / 视频 / 音频</td><td>任意类型文件与整个文件夹</td></tr>
+    <tr><td>组织逻辑</td><td>按媒体库分类与时间</td><td>严格镜像手机源目录结构</td></tr>
+    <tr><td>触发</td><td>自动/手动同步</td><td>本期纯手动</td></tr>
+    <tr><td>网盘位置</td><td><code>photos/</code>、<code>videos/</code>、<code>audio/</code></td><td><code>phoneBackup/&lt;设备名&gt;/</code></td></tr>
+    <tr><td>恢复语义</td><td>回到相册浏览</td><td>按原目录结构找回</td></tr>
+  </table>
+  <div class="callout warn">
+    <b>同一份内容不重复存：</b>若手机里的照片已通过相册同步进入云端，在手机备份中再次选到它时，只显示"已备份（相册）"并跳过上传。两条线共享同一套文件指纹去重与回收站体系。
+  </div>
+
+  <h3>3.2 路径镜像规则</h3>
+  <p>云端目标路径 = <code>phoneBackup / 设备名 / 手机相对路径</code>，其中"手机相对路径"以主存储根为起点逐段镜像，包含中文字符与原文件名：</p>
+  <table>
+    <tr><th>手机本地路径</th><th>网盘目标路径</th></tr>
+    <tr><td><code>Download/发票/a.pdf</code></td><td><code>phoneBackup/Mi14/Download/发票/a.pdf</code></td></tr>
+    <tr><td><code>DCIM/Camera/IMG_1001.jpg</code></td><td><code>phoneBackup/Mi14/DCIM/Camera/IMG_1001.jpg</code></td></tr>
+    <tr><td><code>Documents/合同/租房.docx</code></td><td><code>phoneBackup/Mi14/Documents/合同/租房.docx</code></td></tr>
+  </table>
+  <h4>设备名规则</h4>
+  <ul>
+    <li>首次进入时默认取手机型号名称（如 <code>Mi14</code>），用户可在备份页顶部<b>编辑</b>，编辑后立即生效，仅影响此后新上传文件的路径。</li>
+    <li>名称做非法字符清洗（<code>/ \ : * ? " &lt; &gt; |</code> 及首尾空格、点号替换为 <code>_</code>），长度上限 32；为空或清洗后无有效字符时回退为 <code>Android设备</code>。</li>
+    <li>多台同型号设备的重名由用户通过编辑设备名自行规避 <span class="assume">假设</span>。</li>
+  </ul>
+
+  <h3>3.3 与现有能力的衔接</h3>
+  <p>以下能力在产品侧视为既有能力直接复用，不重新设计：分片上传、断点续传、指纹秒传（内容已在云端时不重复占用存储）、前台同步通知、取消机制、云端文件列表/搜索/缩略图/回收站。手机备份产出的文件与普通网盘文件行为一致，<b>但不出现在相册、视频、音频分类视图中</b>。</p>
+</section>
+
+<!-- 4 -->
+<section class="card" id="fr">
+  <h2>4. 功能需求</h2>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-01</span><span class="p0 tag">P0</span><span class="fr-title">网盘页入口</span></div>
+    <dl>
+      <dt>目的</dt><dd>让用户从网盘上下文进入"把手机内容存入网盘"的流程。</dd>
+      <dt>布局</dt><dd>网盘 tab 顶部操作区，「回收站」按钮旁新增「手机备份」按钮（图标 + 文字）。</dd>
+      <dt>触发</dt><dd>任意已登录用户点击，进入手机备份页。</dd>
+      <dt>结果</dt><dd>打开手机备份页（FR-03）；若尚未获得文件访问权限，先进入授权引导（FR-02）。</dd>
+    </div>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-02</span><span class="p0 tag">P0</span><span class="fr-title">文件访问权限引导</span></div>
+    <dl>
+      <dt>目的</dt><dd>浏览完整本地目录树需要"所有文件访问"权限，须向用户说明用途并引导到系统设置开启。</dd>
+      <dt>处理规则</dt>
+      <ul>
+        <li>Android 11 及以上：检查"所有文件访问"授权；未授权时展示授权页（图标、用途说明「用于浏览并备份您选择的手机文件，不会读取未选择的内容」、按钮「去授权」），点击跳转系统"所有文件访问"设置页。</li>
+        <li>Android 10 及以下：使用既有的存储读权限，按系统运行时授权流程处理。</li>
+        <li>从系统设置返回页面时自动重新检测；授权成功则进入浏览；仍未授权则停留授权页。</li>
+      </ul>
+      <dt>禁止操作</dt><dd>未授权时不展示任何文件列表，不进行后台扫描。</dd>
+      <dt>异常</dt><dd>部分定制 ROM 无法定位授权设置页时，提示用户手动进入「设置 → 应用 → 本应用 → 权限 → 所有文件访问」。</dd>
+    </dl>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-03</span><span class="p0 tag">P0</span><span class="fr-title">本地文件浏览</span></div>
+    <dl>
+      <dt>目的</dt><dd>用户按熟悉的手机目录结构找到要备份的内容。</dd>
+      <dt>布局</dt>
+      <dd>
+        顶部：当前设备名（可编辑）+ 路径面包屑（如 <code>内部存储/Download/发票</code>，点击上级段可跳转）。<br>
+        快捷入口行：当根目录下存在这些目录时显示快捷入口 —— 相机(<code>DCIM</code>)、下载(<code>Download</code>)、电影(<code>Movies</code>)、图片(<code>Pictures</code>)、文档(<code>Documents</code>)。<br>
+        列表：文件夹在前、文件在后，各自按名称排序；每行含图标、名称、文件夹项显示"x 项 · 已备份 y 项"，文件项显示大小与备份状态徽标。
+      </dd>
+      <dt>处理规则</dt>
+      <ul>
+        <li>点击文件夹进入下一级；系统返回键/返回按钮回到上一级；位于根目录时再按返回退出页面。</li>
+        <li>默认不显示隐藏文件/文件夹（"." 开头）。</li>
+        <li>0 字节文件正常显示、可选择、可备份。</li>
+        <li>文件类型图标按 图片/视频/音频/文档/压缩包/安装包/其他 区分；不生成本地缩略图 <span class="assume">假设，P0</span>。</li>
+      </ul>
+      <dt>状态</dt><dd>列表项状态由 FR-04 给出；进入文件夹后异步计算，先展示内容再逐步回填状态，浏览不被阻塞。</dd>
+      <dt>异常</dt><dd>无权读取的目录：该行置灰并标注"无法访问"，不可选择；目录为空时空状态提示"该文件夹为空"；存储未挂载/被拔出时提示并不可操作。</dd>
+    </dl>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-04</span><span class="p0 tag">P0</span><span class="fr-title">备份状态识别（去重）</span></div>
+    <dl>
+      <dt>目的</dt><dd>让用户在选择前就知道哪些内容已经在网盘里，避免重复备份。</dd>
+      <dt>处理规则（按顺序命中即止）</dt>
+      <ol>
+        <li><b>本机备份记录优先：</b>图片/视频/音频若已被现有相册同步成功上传（本机 sync_records 存在有效记录），直接标记为 <span class="badge b-done2">已备份·相册</span>，不产生网络请求。</li>
+        <li><b>云端指纹批量校验：</b>未命中本机记录的文件，先在本机计算 SHA-256 指纹，再通过现有 <code>POST /api/files/verify-sync</code> 接口<b>分批校验（每批 50 条，随目录浏览分页懒触发）</b>——请求只带 <code>fileHash</code>（及文件大小），<b>不带云端 relativePath</b>，使同一内容无论位于相册目录还是 phoneBackup 都能命中；命中后按返回记录中的云端路径前缀区分来源：<code>phoneBackup/</code> 开头标记 <span class="badge b-done">已备份·手机备份</span>，其他位置标记 <span class="badge b-done2">已备份·相册</span>，云端路径可在行详情查看。非媒体文件没有拍摄时间等媒体字段，<b>只能走指纹校验通道</b>。</li>
+        <li><b>未命中：</b>标记 <span class="badge b-wait">未备份</span>。</li>
+        <li>计算中的文件显示 <span class="badge b-wait">校验中…</span>；指纹计算与批量校验均在后台进行（调度方式对齐现有 SyncVerifyScheduler 的窗口节流/分页模式），不阻塞浏览与页面操作；校验失败不阻断浏览，该项按未备份处理并在发起同步前重试。</li>
+      </ol>
+      <div class="callout info" style="margin-top:10px">
+        <b>接口现状（已核实）：</b>旧的全量 <code>sync-index</code> 拉取客户端已停用，仅保留空实现；当前统一走 <code>verify-sync</code> 的"批量校验 + 懒重建"模式，本功能直接沿用，不重新引入全量索引同步。
+      </div>
+      <dt>文件夹汇总</dt><dd>文件夹行显示 <code>已备份 y / 共 x 项</code>（递归统计）；全部已备份时文件夹整体呈现已备份样式；统计随子项校验完成动态更新。</dd>
+      <dt>匹配边界</dt><dd>P0 仅在<b>当前登录用户自己的</b>云端文件范围内匹配，不跨用户、不因他人共享文件而判定已备份。</dd>
+      <dt>变更判定</dt><dd>文件大小或指纹与云端记录不一致（文件被修改过）时，视为 <span class="badge b-wait">未备份</span>，备份按 FR-06 覆盖规则处理。</dd>
+    </dl>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-05</span><span class="p0 tag">P0</span><span class="fr-title">选择与发起同步</span></div>
+    <dl>
+      <dt>选择规则</dt>
+      <ul>
+        <li>长按列表项或点击行首勾选圈进入多选模式；多选模式下点击勾选圈切换选中，点击行其他区域不退出多选。</li>
+        <li><b>选中文件夹 = 递归选中其下全部文件</b>（含所有子目录）；底部操作栏显示选中文件数与总大小，并自动扣除已备份项，展示"将上传 n 项 · x.x GB，跳过已备份 m 项"。</li>
+        <li>支持全选当前目录；已备份项允许勾选但执行时自动跳过。</li>
+        <li>进入/退出多选模式不丢失已选内容（跨目录选择保留选择集）；退出多选清空选择。</li>
+      </ul>
+      <dt>触发条件</dt><dd>"开始备份"按钮在"扣除跳过后实际上传项 ≥ 1"时可用；全部为已备份时按钮置灰，文案"所选内容均已备份"。</dd>
+      <dt>发起前</dt><dd>若存在仍处"校验中"的选中文件，先等待其校验完成以确定上传/跳过，再开始。</dd>
+      <dt>结果</dt><dd>启动前台同步任务（FR-07），页面进入同步进度态。</dd>
+    </dl>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-06</span><span class="p0 tag">P0</span><span class="fr-title">同步执行与落盘</span></div>
+    <dl>
+      <dt>执行方式</dt><dd>以前台服务执行，通知栏显示不可消除的进度通知（文件名、总进度）；应用退到后台或熄屏后继续。</dd>
+      <dt>处理规则</dt>
+      <ul>
+        <li>按 3.2 路径镜像规则逐文件上传，云端自动创建不存在的中间目录。</li>
+        <li>复用现有分片上传与断点续传；上传时携带文件指纹，服务端确认内容已存在时按秒传完成（跳过实际传输、不重复占空间）。</li>
+        <li>同设备同路径且指纹不同（本地文件已更新）：<b>覆盖云端旧内容</b>，保持"镜像"语义；历史版本不在本期范围。</li>
+        <li>已备份项（FR-04 命中）直接计入跳过，不发起上传。</li>
+      </ul>
+      <dt>完成后状态变更</dt><dd>文件在网盘中立即可见、可下载、可删除（进入回收站）、图片/视频有缩略图；本地列表状态更新为已备份·手机备份；本机写入备份记录（含 remoteFileId 与指纹），后续进入目录时 FR-04 可直接命中或经 verify-sync 快速校验。</dd>
+      <dt>删除语义</dt><dd>本地删除文件<b>不会</b>删除云端副本——手动备份是"快照"，云端内容保留到用户在网盘里主动删除为止。</dd>
+    </dl>
+  </div>
+
+  <div class="fr">
+    <div class="fr-head"><span class="fr-id">FR-07</span><span class="p0 tag">P0</span><span class="fr-title">进度、取消与结果</span></div>
+    <dl>
+      <dt>进行中</dt><dd>页内进度卡片显示：总进度（第 n/共 N 项）、当前文件名、单文件进度百分比、已上传大小；通知栏同步展示。</dd>
+      <dt>取消</dt><dd>用户点击"取消同步"：当前文件在当前分片传输完成后中止，未开始的文件不再传输；<b>已上传完成的文件保留在云端</b>并标记为已备份；取消后进入结果页，状态标注"已取消"。</dd>
+      <dt>结果页</dt><dd>展示 成功 n 项 / 跳过（已备份）m 项 / 失败 k 项 / 已取消；失败项列出文件名与原因；提供「重试失败项」（k&gt;0 时）与「完成」。</dd>
+      <dt>重试</dt><dd>仅对失败项重新执行一轮，其余规则不变。</dd>
+    </dl>
+  </div>
+
+  <h3>关键页面交互预览</h3>
+  <p style="font-size:13.5px;color:#86909c">下方为可切换的低保真原型，用于确认布局与状态，非视觉稿。</p>
+
+  <div class="demo-switch" id="demoSwitch">
+    <button data-s="browse" class="on">浏览（带状态）</button>
+    <button data-s="select">多选同步</button>
+    <button data-s="running">同步进行中</button>
+    <button data-s="result">完成结果</button>
+    <button data-s="perm">未授权</button>
+  </div>
+
+  <div class="demo-wrap">
+    <div class="phone"><div class="screen" id="screen"></div></div>
+    <div class="demo-note" id="demoNote"></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="card" id="rules">
+  <h2>5. 共享规则（唯一口径）</h2>
+
+  <h3>5.1 备份判定总流程</h3>
+  <div class="flow">
+    <div class="step"><b>① 本机记录</b>媒体文件已有相册同步成功记录 → 已备份·相册</div>
+    <div class="step"><b>② verify-sync 批量指纹校验</b>SHA-256（50 条/批分页）命中本人云端 → 按云端路径前缀标来源</div>
+    <div class="step"><b>③ 未命中</b>标记未备份，纳入待上传</div>
+    <div class="step"><b>④ 上传秒传兜底</b>上传时服务端再校验指纹，内容已存在则秒传完成</div>
+  </div>
+  <p>同一文件在页面上永远只有一个备份状态；任何环节判定为已存在即不再重复传输。</p>
+
+  <h3>5.2 计数口径</h3>
+  <ul>
+    <li>文件夹"共 x 项"= 其下所有层级的<b>文件</b>数（不含文件夹本身，不含隐藏项）。</li>
+    <li>"已备份 y 项"= 状态为 已备份·相册 或 已备份·手机备份 的文件数。</li>
+    <li>一次同步结果中的"跳过"= 发起前已备份 + 传输中被秒传确认的项之和，结果页可展开区分 <span class="assume">假设</span>。</li>
+  </ul>
+
+  <h3>5.3 命名与路径冲突</h3>
+  <ul>
+    <li>云端目录不存在时按镜像自动逐级创建；文件名保持与手机一致。</li>
+    <li>同设备内两个不同本地文件不会映射到同一云端路径；同名冲突只可能来自"文件被修改"，按 FR-06 覆盖处理。</li>
+    <li>设备名变更不迁移历史文件（旧目录保留），仅影响变更后的路径。</li>
+  </ul>
+
+  <h3>5.4 权限与隐私</h3>
+  <ul>
+    <li>仅在用户进入手机备份页并授权后访问文件；只读取用户选中路径及其子内容用于备份，不做后台扫描、不收集文件清单用于其他用途。</li>
+    <li>所有传输与访问沿用现有登录鉴权，文件归属当前用户空间。</li>
+  </ul>
+</section>
+
+<!-- 6 -->
+<section class="card" id="states">
+  <h2>6. 文件备份状态机</h2>
+  <table class="states">
+    <tr><th>状态</th><th>含义</th><th>进入条件</th><th>允许的操作</th></tr>
+    <tr><td>校验中</td><td>正在计算指纹/查询云端</td><td>进入目录后短暂存在</td><td>可浏览；可勾选（发起前等待校验完成）</td></tr>
+    <tr><td>未备份</td><td>本人云端不存在相同内容</td><td>指纹未命中</td><td>可勾选、可同步</td></tr>
+    <tr><td>已备份·相册</td><td>已由相册同步上传（本机记录或云端命中 photos/videos/audio）</td><td>规则①②命中</td><td>可查看云端位置；勾选后同步时跳过</td></tr>
+    <tr><td>已备份·手机备份</td><td>已存在于 phoneBackup 目录</td><td>云端指纹命中</td><td>同上</td></tr>
+    <tr><td>备份中</td><td>正在上传（含排队）</td><td>同步任务处理到该文件</td><td>可随整批取消，不可单选</td></tr>
+    <tr><td>备份失败</td><td>该文件本轮上传失败</td><td>网络/服务端/存储异常</td><td>随「重试失败项」重试</td></tr>
+  </table>
+  <div class="legend">
+    <span><i style="background:#00a870"></i>已备份·手机备份</span>
+    <span><i style="background:#2b6cef"></i>已备份·相册</span>
+    <span><i style="background:#8a9099"></i>未备份/校验中</span>
+    <span><i style="background:#d83939"></i>失败</span>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="card" id="exception">
+  <h2>7. 异常与边界</h2>
+  <table>
+    <tr><th style="width:26%">场景</th><th>产品行为</th></tr>
+    <tr><td>未授予文件访问权限</td><td>展示授权引导页，不可浏览；返回应用自动复检（FR-02）</td></tr>
+    <tr><td>个别目录/文件不可读</td><td>行置灰标注"无法访问"，不阻塞其他内容；若选中文件夹内含不可读文件，结果中单独提示</td></tr>
+    <tr><td>同步中网络中断</td><td>当前文件计为失败，保留断点；其余文件继续尝试；可重试失败项续传</td></tr>
+    <tr><td>登录态失效</td><td>中止本轮同步并提示重新登录；已完成文件保留；登录后可重试</td></tr>
+    <tr><td>云端空间不足</td><td>当前文件失败并明确提示"云端存储空间不足"，后续文件不再尝试；结果页引导去网盘清理</td></tr>
+    <tr><td>同步中手机本地文件被删除/移动</td><td>该文件计失败，原因"源文件已不存在"；不影响其他文件</td></tr>
+    <tr><td>取消同步</td><td>完成当前分片后停止，已完成文件保留（FR-07）</td></tr>
+    <tr><td>应用被杀/重启</td><td>前台服务通知随之结束；未完成文件状态仍为未备份，重新进入可再次发起；已完成文件因有本机记录而显示已备份</td></tr>
+    <tr><td>云端同路径文件在网页端被删（进回收站）</td><td>下次指纹/路径校验发现云端不存在有效文件时，状态回到未备份，重新备份会在同路径生成新文件</td></tr>
+    <tr><td>大文件/大量文件</td><td>指纹计算与上传均分片、分块进行；单文件大小上限沿用现有上传能力，不新增限制</td></tr>
+    <tr><td>应用私有目录</td><td>/Android/data 等系统屏蔽目录不展示、不承诺可达</td></tr>
+    <tr><td>重复点击开始备份</td><td>任务运行中入口与按钮置为"同步进行中"，禁止并发第二轮</td></tr>
+  </table>
+</section>
+
+<!-- 8 -->
+<section class="card" id="open">
+  <h2>8. 待确认项</h2>
+  <table>
+    <tr><th style="width:30%">事项</th><th>当前处理口径</th></tr>
+    <tr><td>phoneBackup 文件在云端的纳管时机</td><td><span class="assume">假设</span> 上传完成即在网盘文件列表可见并具备缩略图，与现有上传一致；若云端采用定时磁盘对账，则需确认手机备份目录被纳入对账范围</td></tr>
+    <tr><td>"秒传"命中他人文件时的归属</td><td>P0 仅在本人云端文件范围内匹配（verify-sync 按 userId + sha256 查询）；物理去重与归属沿用现有服务端机制，本期不改变其规则</td></tr>
+    <tr><td>设备名重名</td><td>P0 由用户自行改名规避；P1 提供多设备管理</td></tr>
+    <tr><td>按钮最终命名</td><td>默认「手机备份」，评审可改为"手机文件/文件备份"</td></tr>
+  </table>
+</section>
+
+</div>
+
+<script>
+const screens = {
+  browse:{
+    note:[
+      ["#2b6cef","网盘页顶部新增入口，与「回收站」并列。"],
+      ["#00a870","文件夹行实时显示 已备份 y / 共 x 项，进入后异步回填，不阻塞浏览。"],
+      ["#2b6cef","照片类文件命中过相册同步 → 蓝色「已备份·相册」；已在手机备份区 → 绿色。"],
+      ["#869099","指纹还在算的文件显示「校验中…」，逐文件后台计算。"]
+    ],
+    html:`
+      <div class="statusbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+      <div class="appbar"><span class="back">‹</span><span class="t">手机备份</span><span class="act">Mi14 ✎</span></div>
+      <div class="crumb">内部存储 / Download</div>
+      <div class="body">
+        <div class="row"><div class="ic folder">📁</div><div class="nm"><div class="n">发票</div><div class="s">已备份 12 / 共 12 项</div></div><span class="badge b-done">已备份</span></div>
+        <div class="row"><div class="ic folder">📁</div><div class="nm"><div class="n">工作资料</div><div class="s">已备份 5 / 共 31 项</div></div><span class="badge b-wait">部分</span></div>
+        <div class="row"><div class="ic folder">📁</div><div class="nm"><div class="n">WeiXin</div><div class="s">共 208 项</div></div><span class="badge b-wait">校验中…</span></div>
+        <div class="row"><div class="ic doc">📄</div><div class="nm"><div class="n">合同-扫描件.pdf</div><div class="s">2.4 MB</div></div><span class="badge b-wait">未备份</span></div>
+        <div class="row"><div class="ic img">🖼️</div><div class="nm"><div class="n">IMG_1024.jpg</div><div class="s">4.1 MB</div></div><span class="badge b-done2">已备份·相册</span></div>
+        <div class="row"><div class="ic zip">🗜️</div><div class="nm"><div class="n">资料打包.zip</div><div class="s">128 MB</div></div><span class="badge b-wait">未备份</span></div>
+        <div class="row"><div class="ic doc">📝</div><div class="nm"><div class="n">会议记录.docx</div><div class="s">86 KB</div></div><span class="badge b-done">已备份·手机备份</span></div>
+      </div>`
+  },
+  select:{
+    note:[
+      ["#d83939","勾选文件夹 = 递归选中全部内容；跨目录选择不丢失。"],
+      ["#2b6cef","底部实时算出：实际要上传的项数/大小，自动扣除已备份项。"],
+      ["#00a870","已备份项可被勾选，但执行时自动跳过，不会重复上传。"]
+    ],
+    html:`
+      <div class="statusbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+      <div class="appbar"><span class="act">取消</span><span class="t">选择内容</span><span class="act">全选</span></div>
+      <div class="crumb">内部存储 / Download</div>
+      <div class="body">
+        <div class="row"><div class="chk on">✓</div><div class="ic folder">📁</div><div class="nm"><div class="n">工作资料</div><div class="s">31 项 · 1.2 GB</div></div></div>
+        <div class="row"><div class="chk on">✓</div><div class="ic doc">📄</div><div class="nm"><div class="n">合同-扫描件.pdf</div><div class="s">2.4 MB</div></div></div>
+        <div class="row"><div class="chk on">✓</div><div class="ic zip">🗜️</div><div class="nm"><div class="n">资料打包.zip</div><div class="s">128 MB</div></div></div>
+        <div class="row"><div class="chk"></div><div class="ic img">🖼️</div><div class="nm"><div class="n">IMG_1024.jpg</div><div class="s">已备份·相册，将跳过</div></div></div>
+      </div>
+      <div class="selectbar">
+        <div class="cnt">将上传 <b>27 项 · 1.33 GB</b><br><span style="color:#a0a6b0;font-size:11.5px">跳过已备份 5 项</span></div>
+        <button class="btn-primary">开始备份</button>
+      </div>`
+  },
+  running:{
+    note:[
+      ["#2b6cef","前台服务 + 通知栏双通道展示进度，退后台/熄屏继续。"],
+      ["#d83939","取消后当前分片传完即停，已完成文件保留并标记已备份。"],
+      ["#00a870","单文件失败不中断整批，失败项最后统一重试。"]
+    ],
+    html:`
+      <div class="statusbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+      <div class="appbar"><span class="t">正在备份</span></div>
+      <div class="body" style="background:#f5f6f8">
+        <div class="prog-card">
+          <div class="pt">第 14 / 27 项</div>
+          <div class="ps">资料打包.zip · 46% · 已上传 59 MB / 128 MB</div>
+          <div class="bar"><i style="width:46%"></i></div>
+          <div style="margin-top:14px" class="bar"><i style="width:52%"></i></div>
+          <div class="ps" style="margin-top:6px">总进度 52%（成功 12 · 跳过 5 · 失败 0）</div>
+          <div class="cancel">取消同步</div>
+        </div>
+      </div>`
+  },
+  result:{
+    note:[
+      ["#00a870","成功/跳过/失败分项汇总；跳过项不占额外存储。"],
+      ["#d83939","失败项列出文件名与原因，一键只重试失败项。"],
+      ["#2b6cef","完成后回到列表，新上传项状态变为「已备份·手机备份」。"]
+    ],
+    html:`
+      <div class="statusbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+      <div class="appbar"><span class="t">备份完成</span></div>
+      <div class="body" style="background:#f5f6f8">
+        <div class="result">
+          <div class="ring">✓</div>
+          <h4>26 项备份成功</h4>
+          <div class="st">
+            成功 26 项 · 跳过已备份 5 项 · 失败 1 项<br>
+            <span style="color:#d83939">失败：旧手机导出.vcf（网络中断）</span>
+          </div>
+          <div style="margin-top:18px;display:flex;gap:10px;justify-content:center">
+            <button class="btn-primary">重试失败项</button>
+            <button class="btn-primary" style="background:#fff;color:#4e5969;border:1px solid #d9dce1">完成</button>
+          </div>
+        </div>
+      </div>`
+  },
+  perm:{
+    note:[
+      ["#d4a000","Android 11+ 必须授予「所有文件访问」才能浏览完整目录树。"],
+      ["#2b6cef","跳转系统设置，返回时自动复检；未授权不做任何扫描。"],
+      ["#869099","/Android/data 等应用私有目录即使授权也不可见，属系统限制。"]
+    ],
+    html:`
+      <div class="statusbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+      <div class="appbar"><span class="back">‹</span><span class="t">手机备份</span></div>
+      <div class="body">
+        <div class="perm-screen">
+          <div class="big">📂</div>
+          <h4>需要文件访问权限</h4>
+          <p>用于浏览并备份您选择的手机文件与文件夹。<br>我们不会读取您未选择的内容。</p>
+          <button class="btn-primary">去授权</button>
+          <p style="margin-top:18px;font-size:11.5px">系统将打开「所有文件访问」设置页，<br>请找到本应用并开启开关</p>
+        </div>
+      </div>`
+  }
+};
+
+const $ = s => document.querySelector(s);
+function render(key){
+  const s = screens[key];
+  $('#screen').innerHTML = s.html;
+  $('#demoNote').innerHTML = s.note
+    .map(([c,t])=>`<div class="ln"><span class="dot" style="background:${c}"></span><span>${t}</span></div>`).join('');
+}
+$('#demoSwitch').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  document.querySelectorAll('#demoSwitch button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  render(btn.dataset.s);
+});
+render('browse');
+</script>
+</body>
+</html>

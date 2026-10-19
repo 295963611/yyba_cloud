@@ -44,16 +44,33 @@
         </HorizontalScrollView>
     </com.google.android.material.card.MaterialCardView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnOpenTrash"
-        style="@style/Widget.Yyba.Button.Text"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/spacing_md"
-        android:layout_marginBottom="@dimen/spacing_sm"
-        android:text="@string/cloud_trash"
-        app:icon="@drawable/ic_delete"
-        app:iconTint="@color/text_secondary" />
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenTrash"
+            style="@style/Widget.Yyba.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_marginBottom="@dimen/spacing_sm"
+            android:text="@string/cloud_trash"
+            app:icon="@drawable/ic_delete"
+            app:iconTint="@color/text_secondary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPhoneBackup"
+            style="@style/Widget.Yyba.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_marginBottom="@dimen/spacing_sm"
+            android:text="@string/phone_backup"
+            app:icon="@drawable/ic_upload"
+            app:iconTint="@color/text_secondary" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvCloudFiles"

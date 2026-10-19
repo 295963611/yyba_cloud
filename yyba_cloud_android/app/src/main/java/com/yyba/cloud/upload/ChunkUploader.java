@@ -42,6 +42,11 @@ public class ChunkUploader {
         void onProgress(int percent);
     }
 
+    /** 已在本机 SyncRecord 中标记为已同步，跳过上传 */
+    public static final long SKIP_ALREADY_SYNCED = -1;
+    /** 服务端已存在相同内容（fileHash 命中），跳过上传 */
+    public static final long SKIP_DUPLICATE_CONTENT = -2;
+
     public long uploadMedia(Uri uri, String fileName, String mediaType, long modifiedAt,
                             long takenAt, long mediaId, String relativePath) throws Exception {
         return uploadMedia(uri, fileName, mediaType, modifiedAt, takenAt, mediaId, relativePath, null);
@@ -59,9 +64,12 @@ public class ChunkUploader {
         reportProgress(progressListener, 8);
 
         SyncRecord existing = db.syncRecordDao().findByUriAndHash(uri.toString(), hash);
-        if (existing != null && existing.modifiedAt == modifiedAt) {
+        // 仅当记录已带服务端确认的 remoteFileId 时才视为「已上传」，否则（如服务端误判重复
+        // 遗留的窄记录）会永久跳过，导致上传被吞。
+        if (existing != null && existing.remoteFileId != null && existing.remoteFileId > 0
+                && existing.modifiedAt == modifiedAt) {
             reportProgress(progressListener, 100);
-            return -1;
+            return SKIP_ALREADY_SYNCED;
         }
 
         UploadTask task = db.uploadTaskDao().findByUri(uri.toString());
@@ -93,7 +101,7 @@ public class ChunkUploader {
                     hash, size, task, progressListener);
         } catch (DuplicateSkipException e) {
             reportProgress(progressListener, 100);
-            return -1;
+            return SKIP_DUPLICATE_CONTENT;
         } catch (Exception e) {
             if (isSessionError(e)) {
                 resetUploadSession(task);
@@ -160,6 +168,11 @@ public class ChunkUploader {
                                                            String mimeType, String hash,
                                                            long takenAt, long modifiedAt,
                                                            long mediaId) throws Exception {
+        // 即使复用旧会话，也先更新 task.relativePath 为最新值
+        // （UploadTask 可能残留旧格式 phoneBackup/ 路径）
+        task.relativePath = relativePath;
+        db.uploadTaskDao().update(task);
+
         if (task.uploadId != null && !task.uploadId.isEmpty()) {
             try {
                 ApiClient.UploadInitResult status = apiClient.getUploadStatus(task.uploadId);

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -9,6 +10,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -51,9 +54,15 @@
         <activity
             android:name=".ui.SettingsActivity"
             android:theme="@style/Theme.YybaCloud.NoActionBar" />
+        <activity
+            android:name=".ui.PhoneBackupActivity"
+            android:theme="@style/Theme.YybaCloud.NoActionBar" />
 
         <service
             android:name=".sync.SyncForegroundService"
+            android:exported="false" />
+        <service
+            android:name=".backup.BackupForegroundService"
             android:exported="false" />
 
     </application>

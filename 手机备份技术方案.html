@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>技术方案 · 手机备份（任意文件夹/文件手动同步）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1f2329; --ink-2:#4e5969; --ink-3:#86909c;
+    --line:#e5e6eb; --brand:#2b6cef; --brand-bg:#eef3ff;
+    --green:#00a870; --green-bg:#e8fffb; --amber:#d4a000; --amber-bg:#fff7e0;
+    --red:#d83939; --red-bg:#ffece8; --purple:#7c3fdd; --purple-bg:#f3eaff;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.75;font-size:15px}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 28px 96px}
+  header.doc{background:linear-gradient(135deg,#1d39c4,#2b6cef);color:#fff;border-radius:18px;
+    padding:34px 38px;margin-bottom:26px;box-shadow:0 8px 28px rgba(43,108,239,.22)}
+  header.doc .eyebrow{font-size:13px;letter-spacing:.18em;opacity:.85;text-transform:uppercase}
+  header.doc h1{margin:.35em 0 .25em;font-size:30px;letter-spacing:.5px}
+  header.doc p{margin:0;opacity:.92;font-size:14px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+  .meta-grid .m{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);
+    border-radius:10px;padding:10px 14px}
+  .meta-grid .m b{display:block;font-size:12px;opacity:.8;font-weight:500}
+  .meta-grid .m span{font-size:14px;font-weight:600}
+  section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px 30px;margin-bottom:20px}
+  h2{font-size:21px;margin:0 0 14px;padding-left:12px;border-left:4px solid var(--brand)}
+  h3{font-size:17px;margin:24px 0 10px;color:var(--ink)}
+  h4{font-size:15px;margin:16px 0 6px;color:var(--ink-2)}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#f2f4f8;font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+  code{background:#f0f2f5;border-radius:5px;padding:1px 7px;font-size:13px;
+    font-family:Consolas,"Courier New",monospace;color:#b42bb8}
+  .tag{display:inline-block;border-radius:5px;padding:1px 8px;font-size:12px;font-weight:600}
+  .reuse{background:var(--green-bg);color:var(--green)}
+  .adapt{background:var(--amber-bg);color:var(--amber)}
+  .new{background:var(--red-bg);color:var(--red)}
+  .zero{background:var(--brand-bg);color:var(--brand)}
+  .callout{border-radius:10px;padding:13px 16px;margin:14px 0;font-size:14px}
+  .callout.info{background:var(--brand-bg);border-left:4px solid var(--brand)}
+  .callout.warn{background:var(--amber-bg);border-left:4px solid var(--amber)}
+  .callout.key{background:var(--green-bg);border-left:4px solid var(--green)}
+  .callout.danger{background:var(--red-bg);border-left:4px solid var(--red)}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .toc a{font-size:13px;color:var(--brand);text-decoration:none;background:#fff;border:1px solid var(--line);
+    border-radius:20px;padding:5px 13px}
+  .toc a:hover{border-color:var(--brand)}
+  /* module diagram */
+  .arch{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
+  .arch .col{background:#fafbfc;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .arch .col h4{margin:0 0 10px;color:var(--brand)}
+  .arch .layer{background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:9px 12px;margin:7px 0;
+    font-size:13.5px;display:flex;align-items:center;gap:8px}
+  .arch .layer .nm{font-weight:600;flex:1}
+  .arch .layer .desc{font-size:12px;color:var(--ink-3);font-weight:400}
+  .arch .arrow{text-align:center;color:var(--brand);font-size:18px;margin:2px 0}
+  .pill{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11.5px;font-weight:600}
+  /* sequence */
+  .seq{counter-reset:seq;margin:12px 0;padding:0}
+  .seq .step{position:relative;padding:10px 14px 10px 44px;margin:0 0 8px;
+    background:#f7f9ff;border:1px solid #d6e2ff;border-radius:9px;font-size:13.5px}
+  .seq .step::before{counter-increment:seq;content:counter(seq);position:absolute;left:10px;top:50%;
+    transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:var(--brand);
+    color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .seq .step b{color:var(--brand)}
+  .seq .step .note{display:block;color:var(--ink-3);font-size:12.5px;margin-top:3px}
+  .seq .arrow-down{text-align:center;color:var(--brand);font-size:15px;margin:-4px 0 4px}
+  .seq.alt .step{background:#fff7e0;border-color:#ffe08a}
+  .seq.alt .step::before{background:var(--amber)}
+  .file-tree{font-family:Consolas,monospace;font-size:13px;line-height:1.9;background:#fafbfc;
+    border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:10px 0;white-space:pre}
+  .file-tree .dir{color:var(--brand);font-weight:600}
+  .file-tree .new{color:var(--green)}
+  .file-tree .cmt{color:var(--ink-3)}
+  @media(max-width:760px){
+    .arch{grid-template-columns:1fr}
+    .meta-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Technical Design Document</div>
+  <h1>手机备份 · 技术方案</h1>
+  <p>Android 端文件系统浏览 + 手动同步到网盘 <code style="background:rgba(255,255,255,.18);color:#fff">phoneBackup/&lt;设备名&gt;/</code> 专属区域</p>
+  <div class="meta-grid">
+    <div class="m"><b>文档状态</b><span>待评审</span></div>
+    <div class="m"><b>版本</b><span>v1.0</span></div>
+    <div class="m"><b>关联 PRD</b><span>手机备份功能PRD v1.0</span></div>
+    <div class="m"><b>日期</b><span>2026-10-12</span></div>
+  </div>
+</header>
+
+<div class="toc">
+  <a href="#summary">1 设计总览</a>
+  <a href="#arch">2 架构与模块</a>
+  <a href="#server">3 服务端零改动验证</a>
+  <a href="#data">4 数据模型</a>
+  <a href="#flow-browse">5 流程：浏览与状态回填</a>
+  <a href="#flow-sync">6 流程：选择与同步执行</a>
+  <a href="#flow-cancel">7 流程：取消与重试</a>
+  <a href="#reuse">8 复用边界矩阵</a>
+  <a href="#impl">9 实现清单</a>
+  <a href="#risk">10 风险与对策</a>
+</div>
+
+<!-- 1 -->
+<section class="card" id="summary">
+  <h2>1. 设计总览</h2>
+  <p>本方案在<b>不改动服务端</b>的前提下，于 Android 端新增一条与相册同步并行的手动备份链路。核心思路：<b>复用现有上传/校验/前台服务的骨架，新建面向文件系统的浏览、选择、编排三模块</b>。</p>
+
+  <div class="callout key">
+    <b>三条核心设计决策：</b>
+    <ol style="margin:6px 0 0">
+      <li><b>服务端零改动</b>——<code>verify-sync</code> 请求只带 <code>fileHash</code>（不带 <code>relativePath</code>），绕过服务端路径守卫（FileService.java#L668-L672），使同一内容无论在相册还是 phoneBackup 目录都能命中；命中后按返回的 <code>remotePath</code> 前缀区分来源。上传时 <code>relativePath=phoneBackup/&lt;设备名&gt;/...</code> 走既有落盘逻辑。</li>
+      <li><b>ChunkUploader 零改造复用</b>——文件系统路径通过 <code>Uri.fromFile(file)</code> 转为 <code>file://</code> URI 传入 <code>uploadMedia()</code>，分片/断点续传/秒传全链路不变。</li>
+      <li><b>SyncRecord 表零扩展复用</b>——手机备份记录以 <code>localUri = 文件绝对路径</code>、<code>mediaType = null</code>、<code>mediaId = null</code> 写入，与相册同步记录共存于同一张表。</li>
+    </ol>
+  </div>
+
+  <h3>1.1 与 PRD 的映射</h3>
+  <table>
+    <tr><th>PRD 需求</th><th>技术落点</th><th>是否新建</th></tr>
+    <tr><td>FR-01 网盘页入口</td><td>CloudFragment 布局新增 btnPhoneBackup</td><td><span class="pill adapt">适配</span></td></tr>
+    <tr><td>FR-02 权限引导</td><td>StoragePermissionHelper + 授权页</td><td><span class="pill new">新建</span></td></tr>
+    <tr><td>FR-03 本地文件浏览</td><td>LocalFileBrowser（java.io.File）</td><td><span class="pill new">新建</span></td></tr>
+    <tr><td>FR-04 备份状态识别</td><td>BackupStatusResolver + FileHashVerifyScheduler</td><td><span class="pill new">新建</span></td></tr>
+    <tr><td>FR-05 选择与发起</td><td>BackupSelection 模型 + PhoneBackupActivity</td><td><span class="pill new">新建</span></td></tr>
+    <tr><td>FR-06 同步执行与落盘</td><td>BackupEngine + ChunkUploader（复用）</td><td><span class="pill adapt">适配</span></td></tr>
+    <tr><td>FR-07 进度/取消/结果</td><td>BackupForegroundService + BackupProgressBus</td><td><span class="pill new">新建</span></td></tr>
+  </table>
+</section>
+
+<!-- 2 -->
+<section class="card" id="arch">
+  <h2>2. 架构与模块</h2>
+
+  <h3>2.1 整体分层</h3>
+  <div class="arch">
+    <div class="col">
+      <h4>Android 端（本次新建/适配）</h4>
+      <div class="layer"><span class="nm">UI 层</span><span class="pill new">新建</span>
+        <span class="desc">PhoneBackupActivity · BrowseFragment · SelectBar · ProgressFragment · ResultFragment</span></div>
+      <div class="layer"><span class="nm">编排层</span><span class="pill new">新建</span>
+        <span class="desc">BackupEngine（接受显式文件列表，循环调用 ChunkUploader）</span></div>
+      <div class="layer"><span class="nm">服务层</span><span class="pill new">新建</span>
+        <span class="desc">BackupForegroundService + BackupProgressBus</span></div>
+      <div class="layer"><span class="nm">状态判定</span><span class="pill new">新建</span>
+        <span class="desc">BackupStatusResolver + FileHashVerifyScheduler</span></div>
+      <div class="layer"><span class="nm">浏览层</span><span class="pill new">新建</span>
+        <span class="desc">LocalFileBrowser（File API 目录树）</span></div>
+      <div class="layer"><span class="nm">上传层</span><span class="pill reuse">复用</span>
+        <span class="desc">ChunkUploader · UploadTask · HashUtils</span></div>
+      <div class="layer"><span class="nm">网络层</span><span class="pill reuse">复用</span>
+        <span class="desc">ApiClient.initUpload / verifySyncItems</span></div>
+      <div class="layer"><span class="nm">本地存储</span><span class="pill reuse">复用</span>
+        <span class="desc">SyncRecord · SyncRecordDao · AppDatabase</span></div>
+    </div>
+    <div class="col">
+      <h4>服务端（零改动）</h4>
+      <div class="layer"><span class="nm">verify-sync</span><span class="pill zero">零改</span>
+        <span class="desc">FileService.verifySync → rebuildByFileHash（路径守卫被请求侧规避）</span></div>
+      <div class="layer"><span class="nm">upload/init</span><span class="pill zero">零改</span>
+        <span class="desc">按 relativePath 落盘到 phoneBackup/&lt;设备名&gt;/...</span></div>
+      <div class="layer"><span class="nm">磁盘索引</span><span class="pill zero">零改</span>
+        <span class="desc">DiskIndexService 按 userId 解析用户根目录</span></div>
+      <div class="layer"><span class="nm">CloudFile</span><span class="pill zero">零改</span>
+        <span class="desc">files 表 sha256/fileSize/relativePath 字段已具备</span></div>
+      <div class="layer"><span class="nm">sync-index</span><span class="pill zero">零改</span>
+        <span class="desc">已停用，不重新引入</span></div>
+    </div>
+  </div>
+
+  <h3>2.2 新建模块说明</h3>
+
+  <h4>① LocalFileBrowser —— 文件系统浏览</h4>
+  <ul>
+    <li><b>职责：</b>以 <code>java.io.File</code> 遍历主存储根目录（<code>Environment.getExternalStorageDirectory()</code>）的目录树，返回排序后的文件夹/文件列表。</li>
+    <li><b>根路径：</b><code>/sdcard/</code>（即 <code>Environment.getExternalStorageDirectory()</code>），用户进入后可逐级下钻。</li>
+    <li><b>排序规则：</b>文件夹在前、文件在后，各自按名称升序；默认过滤 "." 开头隐藏项。</li>
+    <li><b>文件夹统计：</b>递归计算子文件数（用于显示"共 x 项"），统计在后台线程执行不阻塞 UI。</li>
+    <li><b>不可读目录：</b><code>File.canRead() == false</code> 的条目标记置灰。</li>
+    <li><b>与 MediaScanner 的区别：</b>MediaScanner 走 MediaStore 只能取照片/视频/音频；LocalFileBrowser 走 File API 可取任意类型文件。</li>
+  </ul>
+
+  <h4>② BackupStatusResolver —— 两级去重判定</h4>
+  <ul>
+    <li><b>职责：</b>对浏览到的每个文件判定备份状态，按 PRD FR-04 的命中顺序：
+      <ol>
+        <li><b>第一级（本机记录）：</b>查 <code>SyncRecordDao.findByUriAndHash(absPath, hash)</code>，若存在有效 <code>remoteFileId</code> → 已备份·来源按 <code>remotePath</code> 前缀判定。</li>
+        <li><b>第二级（云端指纹批量校验）：</b>未命中本机记录的文件，计算 SHA-256 后交给 FileHashVerifyScheduler 分批发往 <code>verify-sync</code>。</li>
+      </ol>
+    </li>
+    <li><b>关键差异：</b>非媒体文件没有 <code>capturedAt</code>（拍摄时间），<b>只走指纹通道</b>，不能走 <code>rebuildByPathSizeCapturedAt</code> 备用通道。</li>
+    <li><b>状态回填：</b>先展示"校验中…"，异步回填，不阻塞浏览。</li>
+  </ul>
+
+  <h4>③ FileHashVerifyScheduler —— 指纹批量校验调度</h4>
+  <ul>
+    <li><b>职责：</b>对齐现有 <code>SyncVerifyScheduler</code> 的窗口节流 + 分页模式，但 Target 面向文件系统项而非 MediaStore 项。</li>
+    <li><b>分页：</b>每批 50 条（<code>PAGE_SIZE = 50</code>），单线程 Executor，DEBOUNCE_MS=300，WINDOW_INTERVAL_MS=10min。</li>
+    <li><b>Target 主键：</b><code>stableKey = 文件绝对路径</code>（而非 MediaStore content URI）。</li>
+    <li><b>请求构造（关键）：</b>VerifySyncItem 只填 <code>fileHash</code> + <code>fileSize</code> + <code>fileName</code>，<b>不填 relativePath、不填 capturedAt、不填 mediaId</b>——使服务端 <code>rebuildByFileHash</code> 的路径守卫（L668-672）不触发，任何位置的相同内容都能命中。</li>
+    <li><b>响应处理：</b>命中后按返回 <code>remotePath</code> 前缀区分：<code>phoneBackup/</code> 开头 → 已备份·手机备份；<code>photos/|videos/|audio/</code> 开头 → 已备份·相册；其他 → 已备份·其他。未命中 → 未备份。</li>
+    <li><b>本机记录写入：</b>校验命中后，将 <code>remoteFileId</code> + <code>remotePath</code> + <code>fileHash</code> 写入 SyncRecord，下次直接命中第一级。</li>
+  </ul>
+
+  <h4>④ BackupEngine —— 同步编排</h4>
+  <ul>
+    <li><b>职责：</b>接受显式的 <code>List&lt;BackupItem&gt;</code>（文件绝对路径 + 目标 relativePath），循环调用 <code>ChunkUploader.uploadMedia()</code>，统计成功/跳过/失败。</li>
+    <li><b>与 SyncEngine 的区别：</b>SyncEngine 从 MediaScanner 扫全量媒体；BackupEngine 接受用户显式选择的文件列表，不做扫描。</li>
+    <li><b>取消机制：</b>对齐 SyncEngine 的 <code>AtomicBoolean cancelRequested</code>，每轮循环检查。</li>
+    <li><b>单文件失败不中断：</b>try-catch 包裹单个文件上传，失败计入 failed 列表，继续下一个。</li>
+    <li><b>秒传处理：</b>ChunkUploader 上传时已携带 hash，服务端确认内容存在抛 <code>DuplicateSkipException</code> → 计入 skipped。</li>
+    <li><b>进度回调：</b>通过 <code>ChunkUploader.ProgressListener</code> 上报单文件百分比，汇总后经 BackupProgressBus 推送到 UI。</li>
+  </ul>
+
+  <h4>⑤ BackupForegroundService —— 前台服务</h4>
+  <ul>
+    <li><b>职责：</b>对齐 <code>SyncForegroundService</code> 的通知栏 + 前台保活模式，但驱动 BackupEngine 而非 SyncEngine。</li>
+    <li><b>Intent：</b><code>ACTION_BACKUP_SYNC</code>（携带选中的文件列表序列化）+ <code>ACTION_BACKUP_CANCEL</code>。</li>
+    <li><b>互斥：</b>复用 <code>AtomicBoolean SYNCING</code> 或新建独立 <code>BACKUP_SYNCING</code>，防止与相册同步并发冲突（建议独立，两条链路并行）。</li>
+    <li><b>通知渠道：</b>新建 <code>backup_channel</code>，避免与相册同步通知互相覆盖。</li>
+  </ul>
+
+  <h4>⑥ DeviceNameProvider —— 设备名管理</h4>
+  <ul>
+    <li><b>默认值：</b><code>Build.MODEL</code>（如 <code>Mi14</code>）。</li>
+    <li><b>持久化：</b>SharedPreferences key <code>phone_backup_device_name</code>。</li>
+    <li><b>非法字符清洗：</b>正则 <code>[/\\:*?"&lt;&gt;|]</code> + 首尾空格/点号 → <code>_</code>，长度截断 32，清洗后为空回退 <code>Android设备</code>。</li>
+    <li><b>生效范围：</b>编辑后立即写入 Prefs，仅影响此后新上传文件的 <code>relativePath</code>，不迁移历史目录。</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section class="card" id="server">
+  <h2>3. 服务端零改动验证</h2>
+  <p>本节逐项证明服务端<b>不需要任何代码变更</b>即可支撑手机备份功能。</p>
+
+  <h3>3.1 verify-sync 路径守卫规避</h3>
+  <p>FileService.java 的 <code>rebuildByFileHash</code>（L655-L674）有一段路径守卫：</p>
+  <div class="file-tree"><span class="cmt">// FileService.java L668-672</span>
+String clientPath = PathUtil.normalizeRelative(item.getRelativePath());
+if (clientPath != null && !clientPath.isEmpty()
+        && !clientPath.equals(matched.getRelativePath())) {
+    return null;  <span class="cmt">// 路径不一致 → 判失败</span>
+}</div>
+  <div class="callout key">
+    <b>规避方式：</b>手机备份的 verify-sync 请求<b>不传 <code>relativePath</code></b>（置 null 或空）。守卫条件 <code>clientPath != null && !clientPath.isEmpty()</code> 不成立，直接跳过，<code>matched</code> 命中后正常返回 <code>toRebuiltSyncRecord</code>——其中 <code>remotePath = matched.getRelativePath()</code>，客户端据此区分来源前缀。
+  </div>
+  <p>由于手机备份的文件可能是任意路径（<code>Download/发票/a.pdf</code>），与相册同步路径（<code>photos/2024/01/a.jpg</code>）天然不同，若传 relativePath 会 100% 触发守卫失败。因此<b>不传 relativePath 是设计上的必然选择</b>，而非权宜之计。</p>
+
+  <h3>3.2 upload/init 落盘路径</h3>
+  <p>ApiClient.initUpload 签名（L135-136）：</p>
+  <div class="file-tree"><span class="cmt">// ApiClient.java</span>
+public UploadInitResult initUpload(String fileName, String relativePath,
+        long totalSize, String mimeType, String sha256, Long capturedAt)</div>
+  <p>手机备份调用时传入 <code>relativePath = "phoneBackup/" + deviceName + "/" + 手机相对路径</code>。服务端 DiskIndexService.java（L190-206）按 <code>userId</code> 解析用户根目录，将 relativePath 作为子路径逐级创建，逻辑与相册同步的 <code>photos/...</code> 完全一致，<b>无需改动</b>。</p>
+
+  <table>
+    <tr><th>场景</th><th>relativePath 传参</th><th>服务端行为</th><th>结果</th></tr>
+    <tr><td>手机备份上传</td><td><code>phoneBackup/Mi14/Download/发票/a.pdf</code></td><td>逐级创建目录，落盘文件</td><td>✓ 零改动</td></tr>
+    <tr><td>手机备份 verify-sync</td><td><b>不传</b>（null/空）</td><td>路径守卫跳过，按 hash 匹配</td><td>✓ 零改动</td></tr>
+    <tr><td>秒传命中</td><td>上传 init 带 hash</td><td>服务端发现 hash 已存在 → 返回已上传</td><td>✓ 零改动</td></tr>
+    <tr><td>覆盖上传（文件已修改）</td><td>同路径 + 新 hash</td><td>服务端覆盖旧内容</td><td>✓ 零改动</td></tr>
+  </table>
+
+  <h3>3.3 磁盘索引与文件可见性</h3>
+  <ul>
+    <li>DiskIndexService 扫描用户根目录下所有文件，<code>phoneBackup/</code> 子目录自动纳入扫描范围，上传完成后即在网盘列表可见。</li>
+    <li>CloudFile 实体（L20-71）已具备 <code>sha256</code>、<code>fileSize</code>、<code>relativePath</code> 字段，是统一事实源，手机备份文件写入后与相册文件行为一致。</li>
+    <li>手机备份产出的文件<b>不出现在相册/视频/音频分类视图</b>——服务端按 <code>relativePath</code> 前缀过滤，<code>phoneBackup/</code> 不在媒体分类查询范围内。</li>
+  </ul>
+
+  <div class="callout info">
+    <b>结论：</b>服务端 FileService、DiskIndexService、CloudFile、上传控制器均零改动。本次改动全部在 Android 端。
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="card" id="data">
+  <h2>4. 数据模型</h2>
+
+  <h3>4.1 SyncRecord 复用（零扩展）</h3>
+  <p>现有 SyncRecord 表（sync_records）字段完全够用，手机备份记录按以下方式填充：</p>
+  <table>
+    <tr><th>字段</th><th>相册同步（现有）</th><th>手机备份（本次）</th></tr>
+    <tr><td>localUri</td><td>content://media/... URI</td><td><b>文件绝对路径</b>（如 <code>/sdcard/Download/发票/a.pdf</code>）</td></tr>
+    <tr><td>localPath</td><td>可选辅助字段</td><td>同 localUri（绝对路径）</td></tr>
+    <tr><td>mediaId</td><td>MediaStore _ID</td><td><b>null</b>（文件系统无媒体 ID）</td></tr>
+    <tr><td>mediaType</td><td>IMAGE / VIDEO / AUDIO</td><td><b>null</b>（非媒体）或按扩展名推断的泛类型</td></tr>
+    <tr><td>fileName</td><td>文件名</td><td>文件名（一致）</td></tr>
+    <tr><td>fileSize</td><td>大小</td><td>大小（一致）</td></tr>
+    <tr><td>fileHash</td><td>SHA-256</td><td>SHA-256（一致）</td></tr>
+    <tr><td>modifiedAt</td><td>MediaStore DATE_MODIFIED</td><td><code>File.lastModified()</code></td></tr>
+    <tr><td>remotePath</td><td>photos/... / videos/...</td><td><code>phoneBackup/&lt;设备名&gt;/...</code></td></tr>
+    <tr><td>remoteFileId</td><td>云端 files.id</td><td>云端 files.id（一致）</td></tr>
+    <tr><td>syncedAt</td><td>同步时间</td><td>同步时间（一致）</td></tr>
+  </table>
+  <div class="callout warn">
+    <b>唯一索引兼容性：</b>SyncRecord 的唯一索引为 <code>(localUri, fileHash)</code>。手机备份的 localUri 是文件绝对路径，与相册同步的 content URI 天然不重叠，<b>不会冲突</b>。同一文件通过相册同步和手机备份分别命中时，两条记录独立存在、各自指向不同的 remotePath，符合 PRD"同一份内容不重复存"的语义（秒传保证物理不重复）。
+  </div>
+
+  <h3>4.2 UploadTask 复用</h3>
+  <p>UploadTask 表已具备 <code>localUri</code>、<code>relativePath</code>、<code>fileSize</code>、<code>fileHash</code>、<code>mediaType</code> 字段，手机备份上传时直接写入，断点续传的 <code>uploadedChunks</code> 机制不变。</p>
+
+  <h3>4.3 内存模型（新建，非持久化）</h3>
+  <table>
+    <tr><th>模型</th><th>字段</th><th>用途</th></tr>
+    <tr>
+      <td>BackupItem</td>
+      <td>absPath · fileName · fileSize · relativePath(目标) · fileHash(lazy) · status</td>
+      <td>单个待备份文件项，BackupEngine 的输入单元</td>
+    </tr>
+    <tr>
+      <td>BackupSelection</td>
+      <td>Map&lt;absPath, BackupItem&gt; · totalSize · totalFiles · skippedCount</td>
+      <td>跨目录选择集，支持递归展开文件夹后去重</td>
+    </tr>
+    <tr>
+      <td>BackupResult</td>
+      <td>successItems · skippedItems · failedItems · cancelled</td>
+      <td>同步结果汇总，驱动结果页 UI</td>
+    </tr>
+  </table>
+
+  <h3>4.4 持久化偏好</h3>
+  <table>
+    <tr><th>SharedPreferences Key</th><th>值</th><th>用途</th></tr>
+    <tr><td>phone_backup_device_name</td><td>String（默认 Build.MODEL）</td><td>设备名持久化</td></tr>
+    <tr><td>phone_backup_last_path</td><td>String（默认根目录）</td><td>记住上次浏览位置</td></tr>
+  </table>
+</section>
+
+<!-- 5 -->
+<section class="card" id="flow-browse">
+  <h2>5. 流程：浏览与状态回填（FR-03 / FR-04）</h2>
+
+  <h3>5.1 进入与授权</h3>
+  <div class="seq">
+    <div class="step"><b>用户点击「手机备份」按钮</b>（CloudFragment.btnPhoneBackup）
+      <span class="note">startActivity → PhoneBackupActivity</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>StoragePermissionHelper.checkManageStorage()</b>
+      <span class="note">Android 11+ 检查 ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION；10 及以下走 READ_EXTERNAL_STORAGE 运行时授权</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step" style="background:#fff7e0;border-color:#ffe08a"><b>未授权？</b>展示授权引导页（FR-02），点击「去授权」跳转系统设置
+      <span class="note">onResume 自动复检；授权后进入浏览</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>已授权 → 加载根目录</b> LocalFileBrowser.listDir(Environment.getExternalStorageDirectory())
+      <span class="note">子线程执行；返回 List&lt;FileEntry&gt;（文件夹在前/文件在后，按名排序，过滤隐藏项）</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>UI 先渲染列表（全部"校验中…"状态）</b>，不等待状态判定
+      <span class="note">浏览不被阻塞；文件夹统计项后台递归计算</span></div>
+  </div>
+
+  <h3>5.2 状态回填（两级去重）</h3>
+  <div class="seq">
+    <div class="step"><b>BackupStatusResolver.resolveBatch(visibleFiles)</b>
+      <span class="note">对当前可见的文件项批量判定</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>第一级：本机 SyncRecord 查询</b> SyncRecordDao.findByUriAndHash(absPath, hash)
+      <span class="note">需要先算 hash；对于已有 hash 缓存的文件直接查；本机命中且 remoteFileId 有效 → 已备份·来源按 remotePath 前缀判定</span></div>
+    <div class="arrow-down">↓ 未命中</div>
+    <div class="step"><b>第二级：FileHashVerifyScheduler 调度</b>
+      <span class="note">DEBOUNCE 300ms 去抖 → 收集 50 条/批 → 单线程提交 verify-sync</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>构造 VerifySyncItem</b>：只填 fileHash + fileSize + fileName
+      <span class="note"><b>不填 relativePath、不填 capturedAt、不填 mediaId</b>——规避服务端路径守卫</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>ApiClient.verifySyncItems(batch)</b> → POST /api/files/verify-sync
+      <span class="note">服务端 rebuildByFileHash 按 userId + sha256 查本人文件</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>响应处理</b>：命中 → 按 remotePath 前缀标来源（phoneBackup/ → 手机备份；photos|videos|audio/ → 相册）→ 写 SyncRecord
+      <span class="note">未命中 → 标记未备份</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>UI 回填</b>：notifyItemChanged 刷新对应行徽标
+      <span class="note">文件夹汇总"已备份 y / 共 x 项"随子项更新动态变化</span></div>
+  </div>
+
+  <div class="callout info">
+    <b>节流策略对齐 SyncVerifyScheduler：</b>DEBOUNCE_MS=300（停止滚动 300ms 后触发），WINDOW_INTERVAL_MS=10min（同一窗口 10 分钟内不重复校验），避免频繁网络请求。
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="card" id="flow-sync">
+  <h2>6. 流程：选择与同步执行（FR-05 / FR-06）</h2>
+
+  <h3>6.1 选择与发起</h3>
+  <div class="seq">
+    <div class="step"><b>用户长按/勾选进入多选模式</b> BackupSelection.add(item)
+      <span class="note">选中文件夹 → 递归展开为子文件列表加入选择集；跨目录选择保留</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>底部操作栏实时计算</b>：totalFiles · totalSize · skippedCount
+      <span class="note">已备份项计入跳过数；"将上传 n 项 · x.x GB，跳过已备份 m 项"</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>点击「开始备份」</b>（实际上传项 ≥ 1 时可用）
+      <span class="note">若存在"校验中"的选中文件，先等待其校验完成</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>构造 BackupItem 列表</b>：每个文件计算 relativePath = "phoneBackup/" + deviceName + "/" + 手机相对路径
+      <span class="note">设备名经 DeviceNameProvider 清洗</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>启动 BackupForegroundService</b> Intent.ACTION_BACKUP_SYNC + 序列化 BackupItem 列表
+      <span class="note">页面切换到进度态</span></div>
+  </div>
+
+  <h3>6.2 同步执行</h3>
+  <div class="seq">
+    <div class="step"><b>BackupForegroundService.onStartCommand</b> startForeground + 创建通知
+      <span class="note">BACKUP_SYNCING.compareAndSet(false, true) 防并发</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>BackupEngine.sync(items, callback)</b> 新线程
+      <span class="note">对齐 SyncEngine.syncItems 的线程模型</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>循环遍历 BackupItem</b>（检查 cancelRequested）
+      <span class="note">每轮上报 onProgress(current, total, fileName)</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>ChunkUploader.uploadMedia(Uri.fromFile(file), fileName, null, lastModified, 0, 0, relativePath, listener)</b>
+      <span class="note">file:// URI 传入；mediaType=null, takenAt=0, mediaId=0（非媒体）</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>ChunkUploader 内部</b>：computeHash → 查本机 SyncRecord → ApiClient.initUpload(hash) → 秒传/分片上传 → 写 SyncRecord
+      <span class="note">秒传抛 DuplicateSkipException → BackupEngine 计 skipped；正常完成计 success</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>单文件失败 try-catch</b>：计入 failed 列表，继续下一个
+      <span class="note">网络/存储异常、源文件不存在等</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>全部完成</b> BackupProgressBus.notifyCompleted(success, skipped, failed, lastError)
+      <span class="note">UI 切换到结果页</span></div>
+  </div>
+
+  <div class="callout key">
+    <b>ChunkUploader 复用关键点：</b><code>uploadMedia()</code> 内部 <code>getSize(uri)</code> 和 <code>computeHash(uri)</code> 均通过 <code>contentResolver.openFileDescriptor(uri, "r")</code> 读取，对 <code>file://</code> URI 天然支持，<b>无需改造</b>。
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="card" id="flow-cancel">
+  <h2>7. 流程：取消与重试（FR-07）</h2>
+
+  <h3>7.1 取消</h3>
+  <div class="seq alt">
+    <div class="step"><b>用户点击「取消同步」</b> → 发送 ACTION_BACKUP_CANCEL Intent
+      <span class="note">BackupEngine.requestCancel() → cancelRequested.set(true)</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>当前文件在当前分片传输完成后中止</b>
+      <span class="note">ChunkUploader 循环检查上传任务取消标记；已上传分片保留在 UploadTask</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>已完成的文件保留在云端</b>，标记已备份；未开始的不再传输
+      <span class="note">BackupProgressBus.notifyCancelled(synced, skipped, failed)</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>结果页显示「已取消」</b> + 成功/跳过/失败分项
+      <span class="note">已取消的文件下次进入仍为未备份，可重新发起</span></div>
+  </div>
+
+  <h3>7.2 重试失败项</h3>
+  <div class="seq">
+    <div class="step"><b>结果页点击「重试失败项」</b>（failed.size &gt; 0 时可用）
+      <span class="note">仅对 failed 列表中的 BackupItem 重新构造一轮同步</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>重新启动 BackupForegroundService</b>，传入失败项子集
+      <span class="note">规则不变：秒传/断点续传/单文件失败不中断</span></div>
+    <div class="arrow-down">↓</div>
+    <div class="step"><b>完成后合并到原结果</b>或展示新一轮结果
+      <span class="note">对齐 PRD FR-07「重试仅对失败项重新执行一轮」</span></div>
+  </div>
+
+  <h3>7.3 应用被杀/重启</h3>
+  <ul>
+    <li>前台服务通知随进程结束而消失；未完成文件状态仍为未备份。</li>
+    <li>已完成文件因有 SyncRecord 本机记录，重新进入目录时第一级直接命中已备份。</li>
+    <li>断点续传：UploadTask 表保留了已上传分片，重试时 ChunkUploader 从 init 恢复 uploadedChunks 继续上传。</li>
+  </ul>
+</section>
+
+<!-- 8 -->
+<section class="card" id="reuse">
+  <h2>8. 复用边界矩阵</h2>
+  <table>
+    <tr><th>模块/文件</th><th>复用方式</th><th>改动点</th><th>风险</th></tr>
+    <tr>
+      <td>ChunkUploader</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>file:// URI 已验证支持 openFileDescriptor；mediaId=0/takenAt=0 不影响上传逻辑</td>
+    </tr>
+    <tr>
+      <td>ApiClient.initUpload</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>relativePath 传 phoneBackup/设备名/... 即可</td>
+    </tr>
+    <tr>
+      <td>ApiClient.verifySyncItems</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>请求构造时不填 relativePath（规避守卫）</td>
+    </tr>
+    <tr>
+      <td>SyncRecord / SyncRecordDao</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>localUri 用绝对路径；唯一索引 (localUri, fileHash) 不冲突</td>
+    </tr>
+    <tr>
+      <td>UploadTask</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>断点续传 uploadedChunks 机制不变</td>
+    </tr>
+    <tr>
+      <td>HashUtils (SHA-256)</td>
+      <td><span class="pill reuse">直接复用</span></td>
+      <td>无</td>
+      <td>file:// URI 输入兼容</td>
+    </tr>
+    <tr>
+      <td>SyncForegroundService</td>
+      <td><span class="pill adapt">参考模式</span></td>
+      <td>新建 BackupForegroundService（独立类，复用通知/渠道/取消模式）</td>
+      <td>独立 BACKUP_SYNCING 原子锁，与相册同步可并行</td>
+    </tr>
+    <tr>
+      <td>SyncEngine</td>
+      <td><span class="pill adapt">参考模式</span></td>
+      <td>新建 BackupEngine（接受显式列表，不做 MediaScanner 扫描）</td>
+      <td>取消机制/进度回调对齐</td>
+    </tr>
+    <tr>
+      <td>SyncVerifyScheduler</td>
+      <td><span class="pill adapt">参考模式</span></td>
+      <td>新建 FileHashVerifyScheduler（Target 改用文件路径，请求不传 relativePath）</td>
+      <td>节流/分页/窗口参数对齐</td>
+    </tr>
+    <tr>
+      <td>SyncProgressBus</td>
+      <td><span class="pill adapt">参考模式</span></td>
+      <td>新建 BackupProgressBus（独立 EventBus/LiveData）</td>
+      <td>避免与相册同步进度事件混入</td>
+    </tr>
+    <tr>
+      <td>CloudFragment 布局</td>
+      <td><span class="pill adapt">适配</span></td>
+      <td>fragment_cloud.xml 新增 btnPhoneBackup（与 btnOpenTrash 并列）</td>
+      <td>无</td>
+    </tr>
+    <tr>
+      <td>MediaScanner</td>
+      <td><span class="pill new">不复用</span></td>
+      <td>新建 LocalFileBrowser（File API）</td>
+      <td>MediaStore 只覆盖媒体，不适用任意文件</td>
+    </tr>
+    <tr>
+      <td>服务端 FileService/DiskIndexService/CloudFile</td>
+      <td><span class="pill zero">零改动</span></td>
+      <td>无</td>
+      <td>已验证路径守卫可规避、落盘逻辑通用</td>
+    </tr>
+  </table>
+</section>
+
+<!-- 9 -->
+<section class="card" id="impl">
+  <h2>9. 实现清单</h2>
+
+  <h3>9.1 Android 端新建文件</h3>
+  <table>
+    <tr><th>文件</th><th>包路径</th><th>职责</th></tr>
+    <tr><td>PhoneBackupActivity.java</td><td>com.yyba.cloud.ui</td><td>浏览/多选/进度/结果 四态宿主</td></tr>
+    <tr><td>fragment_phone_backup.xml</td><td>res/layout</td><td>浏览态布局（面包屑+快捷入口+列表+选择栏）</td></tr>
+    <tr><td>activity_phone_backup.xml</td><td>res/layout</td><td>Activity 容器布局</td></tr>
+    <tr><td>LocalFileBrowser.java</td><td>com.yyba.cloud.backup</td><td>File API 目录树浏览</td></tr>
+    <tr><td>FileEntry.java</td><td>com.yyba.cloud.backup</td><td>浏览项数据模型</td></tr>
+    <tr><td>BackupStatusResolver.java</td><td>com.yyba.cloud.backup</td><td>两级去重判定</td></tr>
+    <tr><td>FileHashVerifyScheduler.java</td><td>com.yyba.cloud.backup</td><td>指纹批量校验调度（50条/批）</td></tr>
+    <tr><td>BackupItem.java</td><td>com.yyba.cloud.backup</td><td>待备份文件项</td></tr>
+    <tr><td>BackupSelection.java</td><td>com.yyba.cloud.backup</td><td>跨目录选择集</td></tr>
+    <tr><td>BackupResult.java</td><td>com.yyba.cloud.backup</td><td>同步结果汇总</td></tr>
+    <tr><td>BackupEngine.java</td><td>com.yyba.cloud.backup</td><td>同步编排（循环调用 ChunkUploader）</td></tr>
+    <tr><td>BackupForegroundService.java</td><td>com.yyba.cloud.backup</td><td>前台服务+通知+取消</td></tr>
+    <tr><td>BackupProgressBus.java</td><td>com.yyba.cloud.backup</td><td>进度事件总线</td></tr>
+    <tr><td>DeviceNameProvider.java</td><td>com.yyba.cloud.backup</td><td>设备名管理+清洗</td></tr>
+    <tr><td>StoragePermissionHelper.java</td><td>com.yyba.cloud.backup</td><td>MANAGE_EXTERNAL_STORAGE 授权</td></tr>
+    <tr><td>PhoneBackupAdapter.java</td><td>com.yyba.cloud.ui</td><td>文件列表 RecyclerView 适配器</td></tr>
+  </table>
+
+  <h3>9.2 Android 端适配文件</h3>
+  <table>
+    <tr><th>文件</th><th>改动</th></tr>
+    <tr><td>fragment_cloud.xml</td><td>btnOpenTrash 后新增 btnPhoneBackup MaterialButton</td></tr>
+    <tr><td>CloudFragment.java</td><td>btnPhoneBackup.setOnClickListener → startActivity(PhoneBackupActivity)</td></tr>
+    <tr><td>AndroidManifest.xml</td><td>注册 PhoneBackupActivity + BackupForegroundService + MANAGE_EXTERNAL_STORAGE 权限声明</td></tr>
+    <tr><td>strings.xml</td><td>新增 phone_backup / phone_backup_device / phone_backup_running 等文案</td></tr>
+  </table>
+
+  <h3>9.3 服务端</h3>
+  <p><b>无改动。</b>所有接口（/api/upload/init、/api/files/verify-sync、磁盘索引）均直接可用。</p>
+</section>
+
+<!-- 10 -->
+<section class="card" id="risk">
+  <h2>10. 风险与对策</h2>
+  <table>
+    <tr><th>风险</th><th>影响</th><th>对策</th></tr>
+    <tr>
+      <td>file:// URI 在部分定制 ROM 上 openFileDescriptor 失败</td>
+      <td>上传/指纹计算异常</td>
+      <td>fallback 用 FileInputStream 直接读取（HashUtils/FileSizeProvider 加 File 重载）</td>
+    </tr>
+    <tr>
+      <td>递归选择超大文件夹（如 WeiXin 208 项）导致选择集膨胀</td>
+      <td>内存占用、UI 卡顿</td>
+      <td>BackupSelection 用 Map 懒展开；底部统计异步计算；超大批量分批上传时进度通知节流</td>
+    </tr>
+    <tr>
+      <td>SHA-256 计算大文件耗时（如 1GB 压缩包）</td>
+      <td>状态回填慢、浏览体验差</td>
+      <td>指纹计算在后台单线程；大文件优先显示"校验中…"；同步发起时若仍在计算，上传时 ChunkUploader 会复用已算 hash</td>
+    </tr>
+    <tr>
+      <td>与相册同步并发运行（两个前台服务）</td>
+      <td>通知栏混淆、网络争用</td>
+      <td>独立通知渠道 backup_channel；BACKUP_SYNCING 独立原子锁；两者可并行不互斥</td>
+    </tr>
+    <tr>
+      <td>设备名变更后历史目录残留</td>
+      <td>同一手机内容分散在多个设备目录</td>
+      <td>P0 明确不迁移历史；设备名编辑页提示"仅影响此后新备份的路径"</td>
+    </tr>
+    <tr>
+      <td>用户在浏览期间修改/删除源文件</td>
+      <td>上传时源文件不存在</td>
+      <td>BackupEngine 捕获 FileNotFoundException → 计失败，原因"源文件已不存在"；不影响其他文件</td>
+    </tr>
+    <tr>
+      <td>360 安全套件拦截写入/读取</td>
+      <td>上传中断</td>
+      <td>沿用现有项目对策（引导加入信任区）；非本次新增风险</td>
+    </tr>
+    <tr>
+      <td>MANAGE_EXTERNAL_STORAGE 被部分应用商店拒绝上架</td>
+      <td>权限不可用</td>
+      <td>P0 仅从官网/自有渠道分发；Play Store 上架策略不在本期范围</td>
+    </tr>
+  </table>
+
+  <div class="callout warn">
+    <b>需确认项：</b>BackupForegroundService 与 SyncForegroundService 并行运行时，服务端是否会因同一用户并发上传产生锁竞争？现有 ChunkUploader 已有 UploadTask 级断点续传与秒传去重，理论上两个并发上传不同文件不冲突；但同一文件被两条链路同时上传时，依赖服务端 upload/init 的幂等性处理——此为既有行为，本期不改变。
+  </div>
+</section>
+
+</div>
+</body>
+</html>

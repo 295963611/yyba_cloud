@@ -146,4 +146,33 @@
     <string name="discover_multi_go_settings">发现多台服务器，请到设置中选择</string>
     <string name="discover_switch_title">切换服务器？</string>
     <string name="discover_switch_confirm">发现服务器 %1$s，是否替换当前地址 %2$s？</string>
+
+    <!-- 手机备份 -->
+    <string name="phone_backup">手机备份</string>
+    <string name="phone_backup_root">存储</string>
+    <string name="phone_backup_running">手机备份中…</string>
+    <string name="phone_backup_channel">手机备份</string>
+    <string name="phone_backup_cancelled_summary">备份已停止：成功 %1$d，跳过 %2$d，失败 %3$d</string>
+    <string name="phone_backup_complete_summary">备份完成：成功 %1$d，跳过 %2$d，失败 %3$d</string>
+    <string name="phone_backup_failed_summary">备份完成（有失败）：成功 %1$d，跳过 %2$d，失败 %3$d</string>
+    <string name="phone_backup_duplicate_hint">有相同的图片已经备份，已跳过 %1$d 项</string>
+    <string name="phone_backup_status_backed_up">已备份</string>
+    <string name="phone_backup_empty">没有可备份的文件</string>
+    <string name="phone_backup_selected_count">已选 %1$d 项</string>
+    <string name="phone_backup_select_all">全选</string>
+    <string name="phone_backup_start">开始备份</string>
+    <string name="phone_backup_cancel">取消备份</string>
+    <string name="phone_backup_no_files_selected">请选择要备份的文件</string>
+    <string name="phone_backup_no_permission_title">需要存储权限</string>
+    <string name="phone_backup_no_permission_msg">手机备份需要「所有文件访问权限」才能浏览和选择文件，请在设置中授予权限。</string>
+    <string name="phone_backup_go_settings">去设置</string>
+    <string name="phone_backup_back_to_browse">返回浏览</string>
+    <string name="phone_backup_cancelled">备份已取消</string>
+    <string name="phone_backup_has_failures">备份完成（有失败）</string>
+    <string name="phone_backup_done">备份完成</string>
+    <string name="phone_backup_result_detail">成功 %1$d 项，跳过 %2$d 项，失败 %3$d 项</string>
+    <string name="phone_backup_no_groups">没有可备份的文件夹</string>
+    <string name="phone_backup_no_files">此文件夹内没有可备份的文件</string>
+    <string name="phone_backup_flat_view">扁平分组</string>
+    <string name="phone_backup_hierarchy_view">层级目录</string>
 </resources>

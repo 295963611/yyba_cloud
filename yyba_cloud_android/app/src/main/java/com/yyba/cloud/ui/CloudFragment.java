@@ -122,6 +122,10 @@ public class CloudFragment extends Fragment implements CloudFileAdapter.Listener
         btnOpenTrash.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), TrashActivity.class)));
 
+        MaterialButton btnPhoneBackup = view.findViewById(R.id.btnPhoneBackup);
+        btnPhoneBackup.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), PhoneBackupActivity.class)));
+
         apiClient = new ApiClient(new PrefsManager(requireContext()));
 
         adapter = new CloudFileAdapter(this, apiClient);

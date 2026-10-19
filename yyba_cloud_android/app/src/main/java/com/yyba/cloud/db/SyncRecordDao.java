@@ -4,6 +4,8 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RawQuery;
+import androidx.sqlite.db.SupportSQLiteQuery;
 
 import java.util.List;
 
@@ -76,4 +78,17 @@ public interface SyncRecordDao {
 
     @Query("DELETE FROM sync_records")
     void deleteAll();
+
+    /** 清理旧格式 localUri 脏数据：file:/// 前缀和纯 /storage/ 路径（非 content:// 的手机备份记录） */
+    @Query("DELETE FROM sync_records WHERE localUri LIKE 'file://%' "
+            + "OR (localUri NOT LIKE 'content://%' AND localUri LIKE '/%')")
+    int deleteLegacyFileUris();
+
+    /**
+     * 批量按 (fileName, fileSize) 查询已同步记录（remoteFileId > 0）。
+     * Room 原生不支持多列 tuple IN，用 RawQuery 动态构建 OR 链。
+     * SQLite 默认参数上限 999，每对占 2 参数，目录文件数 <400 安全。
+     */
+    @RawQuery
+    List<SyncRecord> findSyncedByNamesAndSizes(SupportSQLiteQuery query);
 }
